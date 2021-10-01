@@ -2493,13 +2493,17 @@ distill-header .nav a {
 <li><a href="#paquetes">Paquetes</a></li>
 <li><a href="#descripción-y-lectura-de-datos">Descripción y lectura de datos</a></li>
 <li><a href="#preprocesamiento">Preprocesamiento</a></li>
-<li><a href="#cálculo-de-estadísticas">Cálculo de estadísticas</a></li>
+</ul></li>
+<li><a href="#cálculo-de-estadísticas">CÁLCULO DE ESTADÍSTICAS</a></li>
+<li><a href="#visualización">VISUALIZACIÓN</a><ul>
+<li><a href="#visualización-de-mapas">Visualización de mapas</a></li>
 </ul></li>
 </ul>
 </nav>
 </div>
 <h1 id="propósito" class="unnumbered">PROPÓSITO</h1>
 <p>El objetivo de la carta (<a href="https://cartasdelaplace.substack.com/p/carta-3" class="uri">https://cartasdelaplace.substack.com/p/carta-3</a>) y este pequeño manual es analizar parcialmente los resultados de las <strong>elecciones federales alemanas</strong> que tuvieron lugar el 26 de septiembre de 2021, <strong>visibilizando los datos</strong> en cada uno de los distritos electorales.</p>
+<p>Los códigos de dicho tutorial así como los datos se encuentran en <a href="https://github.com/dadosdelaplace/cartas-de-laplace">Github</a></p>
 <h2 id="requisitos" class="unnumbered">Requisitos</h2>
 <ul>
 <li><p><strong>Conexión a internet</strong> para la descarga de algunos datos y paquetes.</p></li>
@@ -2514,8 +2518,12 @@ distill-header .nav a {
 <p>También puedes dejarme tu feedback y/o difundir dicho material por <strong>redes</strong>. Te dejo por aquí las mías: <a href="https://twitter.com/dadosdelaplace">Twitter</a>, <a href="https://instagram.com/javieralvarezliebana">Instagram</a>, <a href="https://dadosdelaplace.com">Web</a></p>
 <h1 id="datos">PREPARACIÓN DE LOS DATOS</h1>
 <blockquote>
-<p>Si ya tienes los datos procesados y preparados puedes ir directamente a la parte de visualización y gráficas</p>
+<p>Si ya tienes los datos procesados y preparados puedes ir directamente a la parte de visualización y gráficas.</p>
 </blockquote>
+<ul>
+<li><a href="https://github.com/dadosdelaplace/cartas-de-laplace/tree/main/Carta-3-elecciones-alemania/DATOS">Datos en bruto</a></li>
+<li><a href="https://github.com/dadosdelaplace/cartas-de-laplace/tree/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO">Datos procesados</a></li>
+</ul>
 <h2 id="paquetes">Paquetes</h2>
 <div class="layout-chunk" data-layout="l-body">
 <table>
@@ -2585,9 +2593,13 @@ distill-header .nav a {
 <h2 id="descripción-y-lectura-de-datos">Descripción y lectura de datos</h2>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Cargamos datos: archivo con columnas separadas por ;</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># url datos</span>
+<span class="va">url</span> <span class="op">&lt;-</span>
+  <span class="fu"><a href="https://rdrr.io/r/base/paste.html">paste0</a></span><span class="op">(</span><span class="st">&quot;https://raw.githubusercontent.com/dadosdelaplace/cartas-&quot;</span>,
+         <span class="st">&quot;de-laplace/main/Carta-3-elecciones-alemania/DATOS/&quot;</span><span class="op">)</span>
+<span class="co"># Cargamos datos: archivo con columnas separadas por ;</span>
 <span class="va">datos_brutos</span> <span class="op">&lt;-</span>
-    <span class="fu">read_delim</span><span class="op">(</span>file <span class="op">=</span> <span class="st">&quot;./DATOS/2021.csv&quot;</span>, delim <span class="op">=</span> <span class="st">&quot;;&quot;</span><span class="op">)</span>
+    <span class="fu">read_delim</span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/glue/man/glue.html">glue</a></span><span class="op">(</span><span class="st">&quot;{url}2021.csv&quot;</span><span class="op">)</span>, delim <span class="op">=</span> <span class="st">&quot;;&quot;</span><span class="op">)</span>
 </code></pre>
 </div>
 </div>
@@ -2766,7 +2778,7 @@ distill-header .nav a {
   
   <span class="va">elecciones</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/lubridate/man/year.html">year</a></span><span class="op">(</span><span class="va">fechas</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span>
   <span class="va">datos_por_fecha</span><span class="op">[[</span><span class="va">fechas</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span>
-    <span class="fu">read_csv</span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/glue/man/glue.html">glue</a></span><span class="op">(</span><span class="st">&quot;./DATOS/EXPORTADO/datos_depurados_{elecciones}.csv&quot;</span><span class="op">)</span><span class="op">)</span>
+    <span class="fu">read_delim</span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/glue/man/glue.html">glue</a></span><span class="op">(</span><span class="st">&quot;{url}{elecciones}.csv&quot;</span><span class="op">)</span>, delim <span class="op">=</span> <span class="st">&quot;;&quot;</span><span class="op">)</span>
   
 <span class="op">}</span>
 <span class="fu"><a href="https://rdrr.io/r/base/names.html">names</a></span><span class="op">(</span><span class="va">datos_por_fecha</span><span class="op">)</span>
@@ -2778,12 +2790,12 @@ distill-header .nav a {
 </code></pre>
 </div>
 <pre><code>           Length Class       Mode
-2021-09-26 11     spec_tbl_df list
-2017-09-24 11     spec_tbl_df list
-2013-09-22 11     spec_tbl_df list
-2009-09-27 11     spec_tbl_df list</code></pre>
+2021-09-26 212    spec_tbl_df list
+2017-09-24 192    spec_tbl_df list
+2013-09-22 160    spec_tbl_df list
+2009-09-27 136    spec_tbl_df list</code></pre>
 </div>
-<h2 id="cálculo-de-estadísticas">Cálculo de estadísticas</h2>
+<h1 id="cálculo-de-estadísticas">CÁLCULO DE ESTADÍSTICAS</h1>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># # Calculamos votos en % respecto a votos válidos</span>
@@ -2805,6 +2817,9 @@ distill-header .nav a {
 </code></pre>
 </div>
 </div>
+<h1 id="visualización">VISUALIZACIÓN</h1>
+<h2 id="visualización-de-mapas">Visualización de mapas</h2>
+<p>dsada</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->

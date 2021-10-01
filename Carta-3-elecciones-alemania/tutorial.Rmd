@@ -22,9 +22,13 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
 Sys.setlocale("LC_TIME", "C")
 ```
 
+
+
 # PROPÓSITO {-}
 
 El objetivo de la carta (<https://cartasdelaplace.substack.com/p/carta-3>) y este pequeño manual es analizar parcialmente los resultados de las **elecciones federales alemanas** que tuvieron lugar el 26 de septiembre de 2021, **visibilizando los datos** en cada uno de los distritos electorales.
+
+Los códigos de dicho tutorial así como los datos se encuentran en [Github](https://github.com/dadosdelaplace/cartas-de-laplace)
 
 ## Requisitos {-}
 
@@ -45,10 +49,13 @@ También puedes dejarme tu feedback y/o difundir dicho material por **redes**. T
 
 
 
+
 # PREPARACIÓN DE LOS DATOS {#datos}
 
+> Si ya tienes los datos procesados y preparados puedes ir directamente a la parte de visualización y gráficas.
 
-> Si ya tienes los datos procesados y preparados puedes ir directamente a la parte de visualización y gráficas
+* [Datos en bruto](https://github.com/dadosdelaplace/cartas-de-laplace/tree/main/Carta-3-elecciones-alemania/DATOS)
+* [Datos procesados](https://github.com/dadosdelaplace/cartas-de-laplace/tree/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO)
 
 ## Paquetes {#paquetes}
 
@@ -95,9 +102,13 @@ font_add_google("Titillium Web", "titillium")
 
 
 ```{r carga-datos, warning = FALSE}
+# url datos
+url <-
+  paste0("https://raw.githubusercontent.com/dadosdelaplace/cartas-",
+         "de-laplace/main/Carta-3-elecciones-alemania/DATOS/")
 # Cargamos datos: archivo con columnas separadas por ;
 datos_brutos <-
-    read_delim(file = "./DATOS/2021.csv", delim = ";")
+    read_delim(file = glue("{url}2021.csv"), delim = ";")
 ```
 
 Los datos se nos han guardado en formato `tibble`, un formato de `{tidyverse}` que nos permite guardar datos en forma de tabla (cada columna puede ser lo que quiera), cuyo almacenamiento, manipulación y visualización es más eficiente que los clásicos `data.frame`. La función `read_delim()` (entorno `{tidyverse}`) nos permite leer archivos `.csv` indicándole el separado entre columnas.
@@ -306,7 +317,7 @@ for (i in 1:length(fechas)) {
   
   elecciones <- year(fechas[i])
   datos_por_fecha[[fechas[[i]]]] <-
-    read_csv(file = glue("./DATOS/EXPORTADO/datos_depurados_{elecciones}.csv"))
+    read_delim(file = glue("{url}{elecciones}.csv"), delim = ";")
   
 }
 names(datos_por_fecha)
