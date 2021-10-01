@@ -1,0 +1,343 @@
+---
+title: "Elecciones alemanas: dataviz en mapas en R" 
+description: |
+    Códigos de la newsletter https://cartasdelaplace.substack.com/p/carta-3
+author:
+    - name: "Javier Álvarez Liébana"
+      url: https://dadosdelaplace.com
+date: "`r Sys.Date()`"
+output:
+    distill::distill_article:
+        highlight: kate
+        colorlinks: true
+        code_folding: false
+        toc: true            
+        toc_depth: 3         
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      dev = "ragg_png", res = 600, retina = 2,
+                      fig.width = 15, fig.height = 8.5)
+Sys.setlocale("LC_TIME", "C")
+```
+
+# PROPÓSITO {-}
+
+El objetivo de la carta (<https://cartasdelaplace.substack.com/p/carta-3>) y este pequeño manual es analizar parcialmente los resultados de las **elecciones federales alemanas** que tuvieron lugar el 26 de septiembre de 2021, **visibilizando los datos** en cada uno de los distritos electorales.
+
+## Requisitos {-}
+
+* **Conexión a internet** para la descarga de algunos datos y paquetes.
+
+* **Instalar `R`** (nuestro lenguaje, nuestro idioma) y **`R Studio`** (nuestro Office, nuestro entorno de desarrollo integrado, nuestro Office).
+
+Todo lo necesario es de **descarga gratuita**. Si necesitas ayuda para iniciarte en `R` te he hecho un manual gratuito de iniciación (desde cero): <https://aprendiendo-r-intro.netlify.app/>
+
+
+## Apoya el proyecto
+
+Estos pequeños tutoriales están pensados para aquellas personas que quieran complementar los contenidos de la newsletter (<https://cartasdelaplace.substack.com>) e hilos de Twitter (<https://twitter.com/dadosdelaplace>). Por desgracia, la **divulgación no se hace sola**, así que si quieres **apoyar** los contenidos de divulgación que genero **puedes hacerlo invitándome a dos cafés al mes ☕️☕️ en la comunidad de Patreon**
+
+* [Patreon](https://patreon.com/dadosdelaplace)
+
+También puedes dejarme tu feedback y/o difundir dicho material por **redes**. Te dejo por aquí las mías: [Twitter](https://twitter.com/dadosdelaplace), [Instagram](https://instagram.com/javieralvarezliebana), [Web](https://dadosdelaplace.com)
+
+
+
+# PREPARACIÓN DE LOS DATOS {#datos}
+
+
+> Si ya tienes los datos procesados y preparados puedes ir directamente a la parte de visualización y gráficas
+
+## Paquetes {#paquetes}
+
+```{r echo = FALSE}
+library(knitr)
+paquetes <-
+  data.frame("paquetes" = c("{tidyverse}", "{lubridate}", "{stringi}",
+                            "{purrr}", "{sysfonts}", "{glue}"),
+             "descripción" = c("Entorno de paquetes para el manejo de datos",
+                               "Manejo de fechas", "Manejo de cadenas de texto",
+                               "Operaciones con listas", "Fuentes",
+                               "Pegar cadenas de texto literal"))
+kable(paquetes, col.names = c("paquetes", "descripción"), align = "ll",
+      caption = "Paquetes a utilizar")
+``` 
+
+```{r paquetes}
+rm(list = ls()) # borramos entorno
+
+# Cargamos librerías y paquetes: si nunca se han instalado,
+# instalarlos previamente install.packages("tidyverse")
+# (y así para el resto de paquetes)
+library(tidyverse) # Manejo de datos + ggplot2
+library(lubridate) # Manejo de fechas
+library(stringi) # Manejo de cadenas de texto
+library(purrr) # Operaciones con listas
+library(grDevices) # Paletas de colores y fuentes
+library(patchwork) # Componer gráficas
+library(cowplot) # Componer gráficas
+library(sysfonts) # Fuentes
+library(ggbump) # curvas sigmoides
+library(ggtext) # textos (y en html)
+library(Rfast) # Cálculo de máximos/mínimos eficientes
+library(rvest) # leer datos web
+library(biscale) # Escala bivariante
+library(glue) # Pegar cadenas de texto literal
+
+# Descargamos de google fuentes a usar en los gráficos
+font_add_google("Poppins", "poppins")
+font_add_google("Titillium Web", "titillium")
+```
+
+## Descripción y lectura de datos
+
+
+```{r carga-datos, warning = FALSE}
+# Cargamos datos: archivo con columnas separadas por ;
+datos_brutos <-
+    read_delim(file = "./DATOS/2021.csv", delim = ";")
+```
+
+Los datos se nos han guardado en formato `tibble`, un formato de `{tidyverse}` que nos permite guardar datos en forma de tabla (cada columna puede ser lo que quiera), cuyo almacenamiento, manipulación y visualización es más eficiente que los clásicos `data.frame`. La función `read_delim()` (entorno `{tidyverse}`) nos permite leer archivos `.csv` indicándole el separado entre columnas.
+
+## Preprocesamiento
+  
+Echemos un vistazo a los datos que hemos cargado.
+
+```{r}
+# Resumen de las primeras filas y columnas
+head(datos_brutos)
+
+# Número de filas
+nrow(datos_brutos)
+
+# Número de columnas 
+ncol(datos_brutos)
+```
+
+El archivo de datos tiene **334 filas y 212 columnas**:
+
+* Una **fila por cada uno de los 299 distritos electorales** (más algunas filas vacías que deberemos de eliminar).
+* En las **columnas tenemos distintas variables** de las cuales solo nos interesará el identificador del distrito (columna `Nr`), la región o Länder (`gehört zu`), el nombre del distrito (`Gebiet`), el número de votos totales válidos en cada uno (`Gültige Stimmen`) y los votos válidos de las primeras votaciones de los principales partidos (CDU, SPD, AfD, FDP, DIE LINKE, GRÜNE, CSU).
+
+Filtramos columnas y eliminaremos esas filas vacías:
+
+* `select()` (entorno `{tidyverse}`) para seleccionar las columnas que decidamos con `starts_with()` (aquellas cuyo nombre que empiezan por alguna de las cadenas de texto que le pasamos)
+* `slice()` para indicarle que nos elimine las dos primeras filas que están vacías (le pasamos los índices filas pero con signo negativo).
+
+```{r filtro-datos}
+# Filtramos datos
+datos_filtrados <- datos_brutos %>%
+  # Seleccionamos columnas de interés: que empiecen por...
+  select(starts_with(c("Nr", "gehört", "Gebiet", "Gültige",
+                       "Christlich Demokratische", # CDU
+                       "Sozialdemokratische", # SPD
+                       "Alternative für Deutschland", # AfD
+                       "Freie Demokratische", # FDP
+                       "DIE LINKE", 
+                       "BÜNDNIS 90/DIE GRÜNEN",
+                       "Christlich-Soziale"))) %>%
+  # Quitamos las dos primeras filas vacías (están vacías)
+  slice(-(1:2))
+```
+
+```{r}
+# Sacamos primera fila para fijarnos en el tipo de variables
+datos_filtrados %>% slice(1)
+```
+
+Si te fijas las variables de los votos de los partidos se muestran como números pero en realidad son cadenas de texto (`<chr>` aparece en la cabecera). Para poder trabajar con ellos como números vamos a convertir toda columna a número (salvo el nombre del distrito) con `mutate_at()`, indicándole primero las columnas y luego a aplicar a todas ellas.
+
+```{r}
+datos_filtrados <- datos_filtrados %>%
+  # Todo lo que no sea el nombre del distrito lo
+  # convertimos a número
+  mutate_at(vars(!contains(c("Gebiet"))), as.numeric)
+
+  # Renombramos columnas
+  names(datos_filtrados) <- 
+    c("id", "id2", "distritos",  "validos", "CDU", "SPD", "AfD",
+      "FDP", "LINKE", "GRÜNE", "CSU")
+```
+
+Además los votos de la unión CDU/CSU los queremos agregar como un solo partido (ya que se presentan en coalición), así que calcularemos una nueva variable `CDU_CSU` como la suma de ambas, eliminaremos las columnas antiguas, y creamos una variable `OTROS`, que tendrá el número de votos válidos menos la suma de estos 6 partidos.
+
+```{r}
+# Unimos CDU + CSU y calculamos el OTROS
+datos_filtrados <- datos_filtrados %>% 
+  mutate("CDU_CSU" = datos_filtrados %>% 
+           select(c("CDU", "CSU")) %>%
+           replace(is.na(.), 0) %>%
+           rowSums) %>%
+  # Eliminamos CDU/CSU antiguas
+  select(-c("CDU", "CSU")) %>%
+  # Cambiamos orden de columna
+  relocate(CDU_CSU, .before = 5) %>%
+  # Sumamos en OTROS votos de los partidos seleccionados
+  mutate("OTROS" = rowSums(select(., -(1:4))))
+
+# Añadimos OTROS partidos
+datos_filtrados$OTROS <- datos_filtrados$validos -
+  datos_filtrados$OTROS
+```
+
+Por último vamos a filtrar filas con `filter()` eliminando filas que no tengan votos válidos (filas vacías muchas veces), las filas que no tengan identificador de distrito y las filas que tienen agregados todos los distritos del Länder (tienen `id2 = 99`). Con `mutate_all` podemos aplicar la misma función a todas las columnas: vamos a indicarle que todo valor que esté ausente (`NA`) lo reemplace por 0's.
+
+```{r}
+# Eliminamos filas vacías o agregadas
+datos_filtrados <- datos_filtrados %>%
+  filter(!is.na(id) & id2 != 99 & validos != 0)
+  
+# Guardamos en una variable nombres de partidos 
+partidos <- names(datos_filtrados)[-(1:4)]
+
+# Reemplazamos en todas las columnas ausentes (NA) por 0's
+datos_depurados <- datos_filtrados %>%
+  mutate_all(~replace(., is.na(.), 0))
+```
+
+Tenemos nuestros **datos depurados para empezar a trabajar**.
+
+```{r}
+# Mostramos 3 primeras filas y todas las columnas
+print(datos_depurados, n = 3, width = Inf)
+
+# Salvamos en un csv
+write_csv(datos_depurados, "./DATOS/EXPORTADO/datos_depurados_2021.csv")
+```
+
+```{r echo = FALSE}
+fechas <- c("2021-09-26", "2017-09-24", "2013-09-22", "2009-09-27")
+
+datos_por_fecha <- list()
+for (i in 1:length(fechas)) {
+  
+  # brutos
+  datos_brutos <-
+    read_delim(file = glue("./DATOS/{year(fechas[i])}.csv"),
+               delim = ";")
+  
+  if (year(fechas[i]) %in% c(2013, 2009)) {
+    
+    # Filtramos datos
+    datos_filtrados <- datos_brutos %>%
+      # Seleccionamos columnas
+      select(starts_with(c("Nr", "gehört", "Gebiet", "Gültige",
+                           "CDU", "SPD", "FDP", "DIE LINKE", 
+                           "GRÜNE", "CSU")))
+    datos_filtrados$AfD <- 0
+    datos_filtrados <- datos_filtrados %>%
+      relocate(AfD, .before = 7)
+    
+  } else {
+    
+    # Filtramos datos
+    datos_filtrados <- datos_brutos %>%
+      # Seleccionamos columnas
+      select(starts_with(c("Nr", "gehört", "Gebiet", "Gültige",
+                           "Christlich Demokratische",
+                           "Sozialdemokratische",
+                           "Alternative für Deutschland",
+                           "Freie Demokratische", "DIE LINKE", 
+                           "BÜNDNIS 90/DIE GRÜNEN",
+                           "Christlich-Soziale")))
+  }
+  
+  datos_filtrados <- datos_filtrados %>%
+    # Quitamos la fila primera de NA
+    slice(-(1:2)) %>%
+    # Pasamos variables de votos a números
+    mutate_at(vars(!contains(c("Gebiet"))), as.numeric)
+    
+  # nombres variables
+  names(datos_filtrados) <- 
+    c("id", "id2", "distritos",  "validos", "CDU", "SPD", "AfD",
+      "FDP", "LINKE", "GRÜNE", "CSU")
+  
+  # Unimos CDU + CSU y calculamos el OTROS
+  datos_filtrados <- datos_filtrados %>% 
+    mutate("CDU_CSU" = datos_filtrados %>% 
+             select(c("CDU", "CSU")) %>%
+             replace(is.na(.), 0) %>%
+             rowSums) %>%
+    # Eliminamos CDU/CSU antiguas
+    select(-c("CDU", "CSU")) %>%
+    # Cambiamos orden de columna
+    relocate(CDU_CSU, .before = 5) %>%
+    # Sumamos en OTROS los votos de todos esos partidos
+    mutate("OTROS" = rowSums(select(., -(1:4))))
+  
+  # Añadimos OTROS partidos
+  datos_filtrados$OTROS <- datos_filtrados$validos -
+    datos_filtrados$OTROS
+  
+  # Eliminamos filas vacías o agregadas
+  datos_filtrados <- datos_filtrados %>% filter(!is.na(id)) %>%
+    filter(id2 != 99) %>% filter(validos != 0)
+  
+  # Guardamos
+  datos_por_fecha[[as.character(fechas[i])]] <-
+    datos_filtrados
+  
+  write_csv(datos_filtrados,
+            glue("./DATOS/EXPORTADO/datos_depurados_{year(fechas[i])}.csv"))
+}
+
+# Guardamos nombres partidos 
+partidos <- names(datos_por_fecha$`2017-09-24`)[-(1:4)]
+
+# Reemplazamos NA
+datos_por_fecha <- 
+  map(datos_por_fecha,
+      function(x) { x %>%
+          mutate_all(~replace(., is.na(.), 0)) })
+```
+
+He repetido este proceso para tener los datos de las elecciones de 2021, 2017, 2013 y 2009, de forma podemos cargar cada archivo y guardarlo todo en una lista `datos_por_fecha`.
+
+```{r}
+fechas <- c("2021-09-26", "2017-09-24", "2013-09-22", "2009-09-27")
+datos_por_fecha <- list()
+
+# Recorremos las fechas y cargamos los archivos
+for (i in 1:length(fechas)) {
+  
+  elecciones <- year(fechas[i])
+  datos_por_fecha[[fechas[[i]]]] <-
+    read_csv(file = glue("./DATOS/EXPORTADO/datos_depurados_{elecciones}.csv"))
+  
+}
+names(datos_por_fecha)
+summary(datos_por_fecha)
+```
+
+# CÁLCULO DE ESTADÍSTICAS
+
+```{r}
+# # Calculamos votos en % respecto a votos válidos
+# datos_por_fecha <-
+#   map(datos_por_fecha,
+#       function(x) { x %>% mutate_at(partidos,
+#                                     funs("porc" = 100 * (./validos))) %>%
+#           rowwise() %>%
+#           mutate("primero" =
+#                    partidos[which.max(c_across(CDU_CSU:OTROS))],
+#                  "primer.partido" = max(c_across(CDU_CSU_porc:OTROS_porc)),
+#                  "segundo" = partidos[nth(c_across(CDU_CSU:OTROS), k = 2,
+#                                           descending = TRUE,
+#                                           index.return = TRUE)],
+#                  
+#                  "segundo.partido" = nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,
+#                                          descending = TRUE,
+#                                          index.return = FALSE))} )
+``` 
+
+# VISUALIZACIÓN
+
+## Visualización de mapas
+dsada
+
+
+
