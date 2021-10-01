@@ -2767,7 +2767,54 @@ distill-header .nav a {
 <div class="layout-chunk" data-layout="l-body">
 
 </div>
-<p>He repetido este proceso para tener los datos de las elecciones de 2021, 2017, 2013 y 2009, de forma podemos cargar cada archivo y guardarlo todo en una lista <code>datos_por_fecha</code>.</p>
+<h1 id="cálculo-de-estadísticas">CÁLCULO DE ESTADÍSTICAS</h1>
+<p>blabla</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Calculamos votos en % respecto a votos válidos</span>
+<span class="va">datos_depurados</span> <span class="op">&lt;-</span> <span class="va">datos_depurados</span> <span class="op">%&gt;%</span>
+  <span class="co"># Calculamos porcentajes respecto a los votos válidos</span>
+  <span class="fu">mutate_at</span><span class="op">(</span><span class="va">partidos</span>, <span class="fu">funs</span><span class="op">(</span><span class="st">&quot;porc&quot;</span> <span class="op">=</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">.</span><span class="op">/</span><span class="va">validos</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">rowwise</span><span class="op">(</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="co"># calculamos máximos por filas</span>
+  <span class="fu">mutate</span><span class="op">(</span><span class="st">&quot;primero&quot;</span> <span class="op">=</span> <span class="va">partidos</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html">which.max</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU</span><span class="op">:</span><span class="va">OTROS</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>,
+         <span class="st">&quot;primer.partido&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html">max</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU_porc</span><span class="op">:</span><span class="va">OTROS_porc</span><span class="op">)</span><span class="op">)</span>,
+         <span class="co"># Segundo con más votos</span>
+         <span class="st">&quot;segundo&quot;</span> <span class="op">=</span> <span class="va">partidos</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/pkg/Rfast/man/colnth.html">nth</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU</span><span class="op">:</span><span class="va">OTROS</span><span class="op">)</span>, k <span class="op">=</span> <span class="fl">2</span>,
+                                  descending <span class="op">=</span> <span class="cn">TRUE</span>,
+                                  index.return <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">]</span>,
+         <span class="st">&quot;segundo.partido&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/Rfast/man/colnth.html">nth</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU_porc</span><span class="op">:</span><span class="va">OTROS_porc</span><span class="op">)</span>, k <span class="op">=</span> <span class="fl">2</span>,
+                                 descending <span class="op">=</span> <span class="cn">TRUE</span>,
+                                 index.return <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span>
+
+<span class="co"># Imprimir 3 filas y todas las columnas</span>
+<span class="fu"><a href="https://rdrr.io/r/base/print.html">print</a></span><span class="op">(</span><span class="va">datos_depurados</span>, n <span class="op">=</span> <span class="fl">3</span>, width <span class="op">=</span> <span class="cn">Inf</span><span class="op">)</span>
+</code></pre>
+</div>
+<pre><code># A tibble: 299 × 22
+# Rowwise: 
+     id   id2 distritos                         validos CDU_CSU   SPD
+  &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                               &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
+1     1     1 Flensburg – Schleswig              178571   41721 38932
+2     2     1 Nordfriesland – Dithmarschen Nord  144091   43771 40034
+3     3     1 Steinburg – Dithmarschen Süd       134951   39434 39364
+    AfD   FDP LINKE GRÜNE OTROS CDU_CSU_porc SPD_porc AfD_porc
+  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;        &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+1  9766 12298  6539 50231 19084         23.4     21.8     5.47
+2  8270 13963  4059 20615 13379         30.4     27.8     5.74
+3 10429 19303  4339 16685  5397         29.2     29.2     7.73
+  FDP_porc LINKE_porc GRÜNE_porc OTROS_porc primero primer.partido
+     &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt; &lt;chr&gt;            &lt;dbl&gt;
+1     6.89       3.66       28.1      10.7  GRÜNE             28.1
+2     9.69       2.82       14.3       9.29 CDU_CSU           30.4
+3    14.3        3.22       12.4       4.00 CDU_CSU           29.2
+  segundo segundo.partido
+  &lt;chr&gt;             &lt;dbl&gt;
+1 CDU_CSU            23.4
+2 SPD                27.8
+3 SPD                29.2
+# … with 296 more rows</code></pre>
+</div>
+<p>Podemos repetir el proceso de carga y depuración para tener los datos de las elecciones de 2021, 2017, 2013 y 2009. Dichos datos ya depurados están en <a href="https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO">Github</a>. Vamos a cargarlos todo en una lista <code>datos_por_fecha</code>.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
 <pre class="sourceCode r"><code class="sourceCode r"><span class="va">fechas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;2021-09-26&quot;</span>, <span class="st">&quot;2017-09-24&quot;</span>, <span class="st">&quot;2013-09-22&quot;</span>, <span class="st">&quot;2009-09-27&quot;</span><span class="op">)</span>
@@ -2778,7 +2825,8 @@ distill-header .nav a {
   
   <span class="va">elecciones</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/lubridate/man/year.html">year</a></span><span class="op">(</span><span class="va">fechas</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span>
   <span class="va">datos_por_fecha</span><span class="op">[[</span><span class="va">fechas</span><span class="op">[[</span><span class="va">i</span><span class="op">]</span><span class="op">]</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span>
-    <span class="fu">read_delim</span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/glue/man/glue.html">glue</a></span><span class="op">(</span><span class="st">&quot;{url}{elecciones}.csv&quot;</span><span class="op">)</span>, delim <span class="op">=</span> <span class="st">&quot;;&quot;</span><span class="op">)</span>
+    <span class="fu">read_delim</span><span class="op">(</span>file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/glue/man/glue.html">glue</a></span><span class="op">(</span><span class="st">&quot;{url}EXPORTADO/datos_depurados_{elecciones}.csv&quot;</span><span class="op">)</span>,
+               delim <span class="op">=</span> <span class="st">&quot;,&quot;</span><span class="op">)</span>
   
 <span class="op">}</span>
 <span class="fu"><a href="https://rdrr.io/r/base/names.html">names</a></span><span class="op">(</span><span class="va">datos_por_fecha</span><span class="op">)</span>
@@ -2790,37 +2838,87 @@ distill-header .nav a {
 </code></pre>
 </div>
 <pre><code>           Length Class       Mode
-2021-09-26 212    spec_tbl_df list
-2017-09-24 192    spec_tbl_df list
-2013-09-22 160    spec_tbl_df list
-2009-09-27 136    spec_tbl_df list</code></pre>
+2021-09-26 11     spec_tbl_df list
+2017-09-24 11     spec_tbl_df list
+2013-09-22 11     spec_tbl_df list
+2009-09-27 11     spec_tbl_df list</code></pre>
 </div>
-<h1 id="cálculo-de-estadísticas">CÁLCULO DE ESTADÍSTICAS</h1>
+<p>Para repetir el proceso de <strong>añadir estadísticas a cada fichero</strong> basta con aplicar la función <code>map()</code> del paquete <code>{purrr}</code>, y con argumento todo lo que hemos aplicado justo ahora para obtener el primer y segundo partido. Otra opción es repetir todo el proceso anterior con cada fichero que tengamos.</p>
 <div class="layout-chunk" data-layout="l-body">
 <div class="sourceCode">
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># # Calculamos votos en % respecto a votos válidos</span>
-<span class="co"># datos_por_fecha &lt;-</span>
-<span class="co">#   map(datos_por_fecha,</span>
-<span class="co">#       function(x) { x %&gt;% mutate_at(partidos,</span>
-<span class="co">#                                     funs(&quot;porc&quot; = 100 * (./validos))) %&gt;%</span>
-<span class="co">#           rowwise() %&gt;%</span>
-<span class="co">#           mutate(&quot;primero&quot; =</span>
-<span class="co">#                    partidos[which.max(c_across(CDU_CSU:OTROS))],</span>
-<span class="co">#                  &quot;primer.partido&quot; = max(c_across(CDU_CSU_porc:OTROS_porc)),</span>
-<span class="co">#                  &quot;segundo&quot; = partidos[nth(c_across(CDU_CSU:OTROS), k = 2,</span>
-<span class="co">#                                           descending = TRUE,</span>
-<span class="co">#                                           index.return = TRUE)],</span>
-<span class="co">#                  </span>
-<span class="co">#                  &quot;segundo.partido&quot; = nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,</span>
-<span class="co">#                                          descending = TRUE,</span>
-<span class="co">#                                          index.return = FALSE))} )</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="va">datos_por_fecha</span> <span class="op">&lt;-</span>
+  <span class="fu"><a href="https://rdrr.io/pkg/purrr/man/map.html">map</a></span><span class="op">(</span><span class="va">datos_por_fecha</span>,
+      <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="op">{</span> <span class="va">x</span> <span class="op">%&gt;%</span> <span class="fu">mutate_at</span><span class="op">(</span><span class="va">partidos</span>,
+                                    <span class="fu">funs</span><span class="op">(</span><span class="st">&quot;porc&quot;</span> <span class="op">=</span> <span class="fl">100</span> <span class="op">*</span> <span class="op">(</span><span class="va">.</span><span class="op">/</span><span class="va">validos</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+          <span class="fu">rowwise</span><span class="op">(</span><span class="op">)</span> <span class="op">%&gt;%</span>
+          <span class="fu">mutate</span><span class="op">(</span><span class="st">&quot;primero&quot;</span> <span class="op">=</span>
+                   <span class="va">partidos</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/which.min.html">which.max</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU</span><span class="op">:</span><span class="va">OTROS</span><span class="op">)</span><span class="op">)</span><span class="op">]</span>,
+                 <span class="st">&quot;primer.partido&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html">max</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU_porc</span><span class="op">:</span><span class="va">OTROS_porc</span><span class="op">)</span><span class="op">)</span>,
+                 <span class="st">&quot;segundo&quot;</span> <span class="op">=</span> <span class="va">partidos</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/pkg/Rfast/man/colnth.html">nth</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU</span><span class="op">:</span><span class="va">OTROS</span><span class="op">)</span>, k <span class="op">=</span> <span class="fl">2</span>,
+                                          descending <span class="op">=</span> <span class="cn">TRUE</span>,
+                                          index.return <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">]</span>,
+                 
+                 <span class="st">&quot;segundo.partido&quot;</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/Rfast/man/colnth.html">nth</a></span><span class="op">(</span><span class="fu">c_across</span><span class="op">(</span><span class="va">CDU_CSU_porc</span><span class="op">:</span><span class="va">OTROS_porc</span><span class="op">)</span>, k <span class="op">=</span> <span class="fl">2</span>,
+                                         descending <span class="op">=</span> <span class="cn">TRUE</span>,
+                                         index.return <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span><span class="op">)</span><span class="op">}</span> <span class="op">)</span>
+
+<span class="co"># Guardamos</span>
+<span class="fu">write_csv</span><span class="op">(</span><span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2021-09-26`</span>,
+          file <span class="op">=</span> <span class="st">&quot;./DATOS/EXPORTADO/datos_con_estadisticas_2021.csv&quot;</span><span class="op">)</span>
+<span class="fu">write_csv</span><span class="op">(</span><span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2017-09-24`</span>,
+          file <span class="op">=</span> <span class="st">&quot;./DATOS/EXPORTADO/datos_con_estadisticas_2017.csv&quot;</span><span class="op">)</span>
+<span class="fu">write_csv</span><span class="op">(</span><span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2013-09-22`</span>,
+          file <span class="op">=</span> <span class="st">&quot;./DATOS/EXPORTADO/datos_con_estadisticas_2013.csv&quot;</span><span class="op">)</span>
+<span class="fu">write_csv</span><span class="op">(</span><span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2009-09-27`</span>,
+          file <span class="op">=</span> <span class="st">&quot;./DATOS/EXPORTADO/datos_con_estadisticas_2009.csv&quot;</span><span class="op">)</span>
+</code></pre>
+</div>
+</div>
+<p>Para facilitarnos la labor en algunas gráficas vamos a calcular también una <strong>tabla de datos agregados</strong>, que nos dé estadísticas de cada partido para todas las elecciones (sin desagregar por distritos).</p>
+<div class="layout-chunk" data-layout="l-body">
+<div class="sourceCode">
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Datos globales de Alemania en cada elección</span>
+<span class="va">datos1</span> <span class="op">&lt;-</span> <span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2021-09-26`</span> <span class="op">%&gt;%</span> 
+  <span class="co"># Seleccionamos las variables numéricas</span>
+  <span class="fu">select_if</span><span class="op">(</span><span class="va">is.numeric</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="co"># Eliminamos primero/segundo, porcentajes y votos válidos</span>
+  <span class="fu">select</span><span class="op">(</span><span class="op">-</span><span class="fu">contains</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;id&quot;</span>, <span class="st">&quot;_porc&quot;</span>, <span class="st">&quot;validos&quot;</span>, <span class="st">&quot;primer&quot;</span>, <span class="st">&quot;segundo&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="co"># Transponemos (pivotamos) la tabla</span>
+  <span class="fu">pivot_longer</span><span class="op">(</span><span class="fu">everything</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="co"># Tras agrupar por partidos, calculamos suma de votos</span>
+  <span class="fu">group_by</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">summarize</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">value</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="co"># Etiqueta de la elección</span>
+  <span class="fu">mutate</span><span class="op">(</span><span class="st">&quot;eleccion&quot;</span> <span class="op">=</span> <span class="fl">2021</span><span class="op">)</span>
+<span class="va">datos2</span> <span class="op">&lt;-</span> <span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2017-09-24`</span> <span class="op">%&gt;%</span> 
+  <span class="fu">select_if</span><span class="op">(</span><span class="va">is.numeric</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">select</span><span class="op">(</span><span class="op">-</span><span class="fu">contains</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;id&quot;</span>, <span class="st">&quot;_porc&quot;</span>, <span class="st">&quot;validos&quot;</span>, <span class="st">&quot;primer&quot;</span>, <span class="st">&quot;segundo&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu">pivot_longer</span><span class="op">(</span><span class="fu">everything</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu">group_by</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">summarize</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">value</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu">mutate</span><span class="op">(</span><span class="st">&quot;eleccion&quot;</span> <span class="op">=</span> <span class="fl">2017</span><span class="op">)</span>
+<span class="va">datos3</span> <span class="op">&lt;-</span> <span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2013-09-22`</span> <span class="op">%&gt;%</span> 
+  <span class="fu">select_if</span><span class="op">(</span><span class="va">is.numeric</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">select</span><span class="op">(</span><span class="op">-</span><span class="fu">contains</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;id&quot;</span>, <span class="st">&quot;_porc&quot;</span>, <span class="st">&quot;validos&quot;</span>, <span class="st">&quot;primer&quot;</span>, <span class="st">&quot;segundo&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu">pivot_longer</span><span class="op">(</span><span class="fu">everything</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu">group_by</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">summarize</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">value</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu">mutate</span><span class="op">(</span><span class="st">&quot;eleccion&quot;</span> <span class="op">=</span> <span class="fl">2013</span><span class="op">)</span>
+<span class="va">datos4</span> <span class="op">&lt;-</span> <span class="va">datos_por_fecha</span><span class="op">$</span><span class="va">`2009-09-27`</span> <span class="op">%&gt;%</span> 
+  <span class="fu">select_if</span><span class="op">(</span><span class="va">is.numeric</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">select</span><span class="op">(</span><span class="op">-</span><span class="fu">contains</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;id&quot;</span>, <span class="st">&quot;_porc&quot;</span>, <span class="st">&quot;validos&quot;</span>, <span class="st">&quot;primer&quot;</span>, <span class="st">&quot;segundo&quot;</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+  <span class="fu">pivot_longer</span><span class="op">(</span><span class="fu">everything</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu">group_by</span><span class="op">(</span><span class="va">name</span><span class="op">)</span> <span class="op">%&gt;%</span>
+  <span class="fu">summarize</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html">sum</a></span><span class="op">(</span><span class="va">value</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> <span class="fu">mutate</span><span class="op">(</span><span class="st">&quot;eleccion&quot;</span> <span class="op">=</span> <span class="fl">2009</span><span class="op">)</span>
+
+<span class="co"># Globales uniendo todas las elecciones</span>
+<span class="va">datos_global_alemania</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html">rbind</a></span><span class="op">(</span><span class="va">datos1</span>, <span class="va">datos2</span>, <span class="va">datos3</span>, <span class="va">datos4</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/base/names.html">names</a></span><span class="op">(</span><span class="va">datos_global_alemania</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">&quot;name&quot;</span>, <span class="st">&quot;value&quot;</span>, <span class="st">&quot;eleccion&quot;</span><span class="op">)</span>
+
+<span class="co"># Guardamos</span>
+<span class="fu">write_csv</span><span class="op">(</span><span class="va">datos_global_alemania</span>, <span class="st">&quot;./DATOS/EXPORTADO/datos_global_alemania.csv&quot;</span><span class="op">)</span>
 </code></pre>
 </div>
 </div>
 <h1 id="visualización">VISUALIZACIÓN</h1>
 <h2 id="visualización-de-mapas">Visualización de mapas</h2>
 <p>dsada</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r distill-force-highlighting-css"><code class="sourceCode r"></code></pre></div>
 <!--radix_placeholder_article_footer-->
 <!--/radix_placeholder_article_footer-->
 </div>

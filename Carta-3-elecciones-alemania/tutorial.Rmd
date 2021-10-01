@@ -306,7 +306,33 @@ datos_por_fecha <-
           mutate_all(~replace(., is.na(.), 0)) })
 ```
 
-He repetido este proceso para tener los datos de las elecciones de 2021, 2017, 2013 y 2009, de forma podemos cargar cada archivo y guardarlo todo en una lista `datos_por_fecha`.
+
+
+# CÁLCULO DE ESTADÍSTICAS
+
+blabla 
+
+```{r porc-votos}
+# Calculamos votos en % respecto a votos válidos
+datos_depurados <- datos_depurados %>%
+  # Calculamos porcentajes respecto a los votos válidos
+  mutate_at(partidos, funs("porc" = 100 * (./validos))) %>%
+  rowwise() %>% # calculamos máximos por filas
+  mutate("primero" = partidos[which.max(c_across(CDU_CSU:OTROS))],
+         "primer.partido" = max(c_across(CDU_CSU_porc:OTROS_porc)),
+         # Segundo con más votos
+         "segundo" = partidos[nth(c_across(CDU_CSU:OTROS), k = 2,
+                                  descending = TRUE,
+                                  index.return = TRUE)],
+         "segundo.partido" = nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,
+                                 descending = TRUE,
+                                 index.return = FALSE))
+
+# Imprimir 3 filas y todas las columnas
+print(datos_depurados, n = 3, width = Inf)
+``` 
+
+Podemos repetir el proceso de carga y depuración para tener los datos de las elecciones de 2021, 2017, 2013 y 2009. Dichos datos ya depurados están en [Github](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO). Vamos a cargarlos todo en una lista `datos_por_fecha`.
 
 ```{r}
 fechas <- c("2021-09-26", "2017-09-24", "2013-09-22", "2009-09-27")
@@ -317,38 +343,90 @@ for (i in 1:length(fechas)) {
   
   elecciones <- year(fechas[i])
   datos_por_fecha[[fechas[[i]]]] <-
-    read_delim(file = glue("{url}{elecciones}.csv"), delim = ";")
+    read_delim(file = glue("{url}EXPORTADO/datos_depurados_{elecciones}.csv"),
+               delim = ",")
   
 }
 names(datos_por_fecha)
 summary(datos_por_fecha)
 ```
 
-# CÁLCULO DE ESTADÍSTICAS
+
+Para repetir el proceso de **añadir estadísticas a cada fichero** basta con aplicar la función `map()` del paquete `{purrr}`, y con argumento todo lo que hemos aplicado justo ahora para obtener el primer y segundo partido. Otra opción es repetir todo el proceso anterior con cada fichero que tengamos.
 
 ```{r}
-# # Calculamos votos en % respecto a votos válidos
-# datos_por_fecha <-
-#   map(datos_por_fecha,
-#       function(x) { x %>% mutate_at(partidos,
-#                                     funs("porc" = 100 * (./validos))) %>%
-#           rowwise() %>%
-#           mutate("primero" =
-#                    partidos[which.max(c_across(CDU_CSU:OTROS))],
-#                  "primer.partido" = max(c_across(CDU_CSU_porc:OTROS_porc)),
-#                  "segundo" = partidos[nth(c_across(CDU_CSU:OTROS), k = 2,
-#                                           descending = TRUE,
-#                                           index.return = TRUE)],
-#                  
-#                  "segundo.partido" = nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,
-#                                          descending = TRUE,
-#                                          index.return = FALSE))} )
-``` 
+datos_por_fecha <-
+  map(datos_por_fecha,
+      function(x) { x %>% mutate_at(partidos,
+                                    funs("porc" = 100 * (./validos))) %>%
+          rowwise() %>%
+          mutate("primero" =
+                   partidos[which.max(c_across(CDU_CSU:OTROS))],
+                 "primer.partido" = max(c_across(CDU_CSU_porc:OTROS_porc)),
+                 "segundo" = partidos[nth(c_across(CDU_CSU:OTROS), k = 2,
+                                          descending = TRUE,
+                                          index.return = TRUE)],
+                 
+                 "segundo.partido" = nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,
+                                         descending = TRUE,
+                                         index.return = FALSE))} )
 
+# Guardamos
+write_csv(datos_por_fecha$`2021-09-26`,
+          file = "./DATOS/EXPORTADO/datos_con_estadisticas_2021.csv")
+write_csv(datos_por_fecha$`2017-09-24`,
+          file = "./DATOS/EXPORTADO/datos_con_estadisticas_2017.csv")
+write_csv(datos_por_fecha$`2013-09-22`,
+          file = "./DATOS/EXPORTADO/datos_con_estadisticas_2013.csv")
+write_csv(datos_por_fecha$`2009-09-27`,
+          file = "./DATOS/EXPORTADO/datos_con_estadisticas_2009.csv")
+```
+
+Para facilitarnos la labor en algunas gráficas vamos a calcular también una **tabla de datos agregados**, que nos dé estadísticas de cada partido para todas las elecciones (sin desagregar por distritos).
+
+
+```{r}
+# Datos globales de Alemania en cada elección
+datos1 <- datos_por_fecha$`2021-09-26` %>% 
+  # Seleccionamos las variables numéricas
+  select_if(is.numeric) %>%
+  # Eliminamos primero/segundo, porcentajes y votos válidos
+  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
+  # Transponemos (pivotamos) la tabla
+  pivot_longer(everything()) %>%
+  # Tras agrupar por partidos, calculamos suma de votos
+  group_by(name) %>%
+  summarize(sum(value, na.rm = TRUE)) %>%
+  # Etiqueta de la elección
+  mutate("eleccion" = 2021)
+datos2 <- datos_por_fecha$`2017-09-24` %>% 
+  select_if(is.numeric) %>%
+  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
+  pivot_longer(everything()) %>% group_by(name) %>%
+  summarize(sum(value, na.rm = TRUE)) %>% mutate("eleccion" = 2017)
+datos3 <- datos_por_fecha$`2013-09-22` %>% 
+  select_if(is.numeric) %>%
+  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
+  pivot_longer(everything()) %>% group_by(name) %>%
+  summarize(sum(value, na.rm = TRUE)) %>% mutate("eleccion" = 2013)
+datos4 <- datos_por_fecha$`2009-09-27` %>% 
+  select_if(is.numeric) %>%
+  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
+  pivot_longer(everything()) %>% group_by(name) %>%
+  summarize(sum(value, na.rm = TRUE)) %>% mutate("eleccion" = 2009)
+
+# Globales uniendo todas las elecciones
+datos_global_alemania <- rbind(datos1, datos2, datos3, datos4)
+names(datos_global_alemania) <- c("name", "value", "eleccion")
+
+# Guardamos
+write_csv(datos_global_alemania, "./DATOS/EXPORTADO/datos_global_alemania.csv")
+```
 # VISUALIZACIÓN
 
 ## Visualización de mapas
 dsada
+
 
 
 
