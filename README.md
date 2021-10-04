@@ -31,6 +31,7 @@ GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org
   
 <!-- toc -->
 
+* **Carta #3**: ¿qué sucedió en Alemania? 💌 <https://cartasdelaplace.substack.com/p/carta-3>
 * **Carta #2**: la importancia de visualizar datos 💌 <https://cartasdelaplace.substack.com/p/carta-2>
 * **Carta #1**: perderlo todo, volver a empezar 💌 <https://cartasdelaplace.substack.com/p/carta-1>
 
@@ -40,6 +41,17 @@ GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org
 
 ***
 
+### [Carta #3: ¿qué sucedió en Alemania?](https://cartasdelaplace.substack.com/p/carta-3)
+
+* [💌 **Newsletter**](https://cartasdelaplace.substack.com/p/carta-3)
+* [👨🏻‍🏫 **Tutorial**](...)
+* 📊 **Datos**: datos electorales de [The Federal Returning Officer](https://www.bundeswahlleiter.de/en/bundestagswahlen/2021/ergebnisse.html) y datos de encuestas de la [Wikipedia](https://es.wikipedia.org/wiki/Elecciones_federales_de_Alemania_de_2021)
+* [💻 **Códigos**](https://github.com/dadosdelaplace/cartas-de-laplace/blob/main/Carta-3-elecciones-alemania/tutorial.Rmd)
+
+![](https://user-images.githubusercontent.com/26646492/135931556-04960df3-c3ef-4d47-8d2a-196841cc904a.png)
+
+
+--- 
 
 ### [Carta #2: la importancia de visualizar datos](https://cartasdelaplace.substack.com/p/carta-2)
 
