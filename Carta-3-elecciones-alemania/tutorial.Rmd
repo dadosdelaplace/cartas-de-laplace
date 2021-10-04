@@ -15,16 +15,16 @@ output:
         toc_depth: 3         
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
-                      dev = "ragg_png", res = 600, retina = 2,
-                      fig.width = 15, fig.height = 8.5)
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(fig.width = 8, fig.asp = 1, out.width = "100%",
+                      message = FALSE, warning = FALSE,
+                      echo = TRUE, res = 600)
 Sys.setlocale("LC_TIME", "C")
 ```
 
 
 
-# PROPÓSITO {-}
+# PROPÓSITO {#proposito}
 
 El objetivo de la carta (<https://cartasdelaplace.substack.com/p/carta-3>) y este pequeño manual es analizar parcialmente los resultados de las **elecciones federales alemanas** que tuvieron lugar el 26 de septiembre de 2021, **visibilizando los datos** en cada uno de los distritos electorales.
 
@@ -50,14 +50,25 @@ También puedes dejarme tu feedback y/o difundir dicho material por **redes**. T
 
 
 
-# PREPARACIÓN DE LOS DATOS {#datos}
 
-> Si ya tienes los datos procesados y preparados puedes ir directamente a la parte de visualización y gráficas.
+# PREPARACIÓN {#intro}
 
-* [Datos en bruto](https://github.com/dadosdelaplace/cartas-de-laplace/tree/main/Carta-3-elecciones-alemania/DATOS)
+> Si necesitas ayuda para iniciarte en `R` te he hecho un manual gratuito de iniciación (desde cero): <https://aprendiendo-r-intro.netlify.app/>
+
+* [Datos en bruto](https://github.com/dadosdelaplace/cartas-de-laplace/tree/main/Carta-3-elecciones-alemania/DATOS):
+  - [Elecciones 29-06-2021](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/2021.csv)
+  - [Elecciones 24-09-2017](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/2017.csv)
+  - [Elecciones 22-09-2013](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/2013.csv)
+  - [Elecciones 27-09-2009](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/2009.csv)
+  
 * [Datos procesados](https://github.com/dadosdelaplace/cartas-de-laplace/tree/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO)
+  - [Elecciones 29-06-2021](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO/datos_depurados_2021.csv)
+  - [Elecciones 24-09-2017](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO/datos_depurados_2017.csv)
+  - [Elecciones 22-09-2013](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO/datos_depurados_2013.csv)
+  - [Elecciones 27-09-2009](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO/datos_depurados_2009.csv)
 
-## Paquetes {#paquetes}
+
+## Descripción y lectura de datos
 
 ```{r echo = FALSE}
 library(knitr)
@@ -69,7 +80,7 @@ paquetes <-
                                "Operaciones con listas", "Fuentes",
                                "Pegar cadenas de texto literal"))
 kable(paquetes, col.names = c("paquetes", "descripción"), align = "ll",
-      caption = "Paquetes a utilizar")
+      caption = "Paquetes a utilizar en la preparación de los datos")
 ``` 
 
 ```{r paquetes}
@@ -82,223 +93,85 @@ library(tidyverse) # Manejo de datos + ggplot2
 library(lubridate) # Manejo de fechas
 library(stringi) # Manejo de cadenas de texto
 library(purrr) # Operaciones con listas
-library(grDevices) # Paletas de colores y fuentes
-library(patchwork) # Componer gráficas
-library(cowplot) # Componer gráficas
 library(sysfonts) # Fuentes
-library(ggbump) # curvas sigmoides
-library(ggtext) # textos (y en html)
-library(Rfast) # Cálculo de máximos/mínimos eficientes
-library(rvest) # leer datos web
-library(biscale) # Escala bivariante
 library(glue) # Pegar cadenas de texto literal
-
-# Descargamos de google fuentes a usar en los gráficos
-font_add_google("Poppins", "poppins")
-font_add_google("Titillium Web", "titillium")
 ```
 
-## Descripción y lectura de datos
+El pasado **26 de septiembre de 2021** se celebraron **elecciones al Bundestag** que deberá decidir al canciller del país, cancillería que ha ocupado Merkel los últimos 16 años. El **sistema electoral alemán** es uno de los más deseados pero también de los más complejos. No hay un número fijo de diputados, pero si un mínimo: al menos 598 diputados renovados cada 4 años. Los electores votan dos papeletas:
 
+* **Primer voto (Erststimme)**: es un voto de representación directa, el candidato más votado en cada uno de los **299 distritos** (**Wahlkreis**, no confundir con los 401 distritos administrativos o Kreise correspondientes a la clasificación NUTS3 del Eurostat) obtiene un **mandato directo**.
 
-```{r carga-datos, warning = FALSE}
-# url datos
+* **Segundo voto (Zweitstimme)**: es un voto a **listas cerradas en cada uno de los estados federados (Länder)**. Es este voto el que **decide el número final de diputados**: si un partido obtiene un 20% de segundos votos, deberá ocupar un 20% de escaños en el parlamento (con los 299 mandatos directos ya asignados). 
+
+* **Cláusula de representatividad**: solo podrán acceder partidos con más del 5% a nivel nacional en segundas votaciones o bien 3 o más mandatos directos en las primeras.
+
+* **Escaños compensatarios**: si un partido obtiene un número de mandatos directos superior al % de escaños derivado de las segundas votaciones, el número del resto de partidos aumentará proporcionalmente a ese exceso.
+
+Los datos electorales se han obtenido de la [**oficia electoral alemana (The Federal Returning Officer)**](https://www.bundeswahlleiter.de/en/bundestagswahlen/2021/ergebnisse.html), con el **% de votos de primeras y segundas votaciones** de los 299 distritos electorales. En las visualización solo vamos a considerar los datos de las primeras votaciones (mandatos directos). Puedes ver más detalles del procesamiento de datos previo en <https://github.com/dadosdelaplace/cartas-de-laplace/blob/main/Carta-3-elecciones-alemania/codigo_bruto.R>.
+
+En este documento **cargaremos los datos ya procesados desde Github** con la función `read_delim()` (entorno `{tidyverse}`), que nos permite leer archivos `.csv` indicándole el separador entre columnas. 
+
+```{r ejemplo-carga-datos, warning = FALSE}
+# url común de los datos
 url <-
   paste0("https://raw.githubusercontent.com/dadosdelaplace/cartas-",
-         "de-laplace/main/Carta-3-elecciones-alemania/DATOS/")
-# Cargamos datos: archivo con columnas separadas por ;
-datos_brutos <-
-    read_delim(file = glue("{url}2021.csv"), delim = ";")
+         "de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO/")
+
+# Cargamos datos de 2021
+datos <- read_delim(file = glue("{url}datos_depurados_2021.csv"),
+                    delim = ",")
+
+# Imprimimos 3 filas y todas las columnas
+print(datos, n = 3, width = Inf)
 ```
 
-Los datos se nos han guardado en formato `tibble`, un formato de `{tidyverse}` que nos permite guardar datos en forma de tabla (cada columna puede ser lo que quiera), cuyo almacenamiento, manipulación y visualización es más eficiente que los clásicos `data.frame`. La función `read_delim()` (entorno `{tidyverse}`) nos permite leer archivos `.csv` indicándole el separado entre columnas.
+Si lo queremos para cada elección, **podemos recorrer todas las fechas** disponibles e iremos realizando la lectura de cada uno.
 
-## Preprocesamiento
-  
-Echemos un vistazo a los datos que hemos cargado.
+> El código utilizado para procesar los datos lo tienes disponible en <https://github.com/dadosdelaplace/cartas-de-laplace/blob/main/Carta-3-elecciones-alemania/codigo_bruto.R>
 
-```{r}
-# Resumen de las primeras filas y columnas
-head(datos_brutos)
+```{r carga-datos, warning = FALSE}
+# url común de los datos
+url <-
+  paste0("https://raw.githubusercontent.com/dadosdelaplace/cartas-",
+         "de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO/")
 
-# Número de filas
-nrow(datos_brutos)
-
-# Número de columnas 
-ncol(datos_brutos)
-```
-
-El archivo de datos tiene **334 filas y 212 columnas**:
-
-* Una **fila por cada uno de los 299 distritos electorales** (más algunas filas vacías que deberemos de eliminar).
-* En las **columnas tenemos distintas variables** de las cuales solo nos interesará el identificador del distrito (columna `Nr`), la región o Länder (`gehört zu`), el nombre del distrito (`Gebiet`), el número de votos totales válidos en cada uno (`Gültige Stimmen`) y los votos válidos de las primeras votaciones de los principales partidos (CDU, SPD, AfD, FDP, DIE LINKE, GRÜNE, CSU).
-
-Filtramos columnas y eliminaremos esas filas vacías:
-
-* `select()` (entorno `{tidyverse}`) para seleccionar las columnas que decidamos con `starts_with()` (aquellas cuyo nombre que empiezan por alguna de las cadenas de texto que le pasamos)
-* `slice()` para indicarle que nos elimine las dos primeras filas que están vacías (le pasamos los índices filas pero con signo negativo).
-
-```{r filtro-datos}
-# Filtramos datos
-datos_filtrados <- datos_brutos %>%
-  # Seleccionamos columnas de interés: que empiecen por...
-  select(starts_with(c("Nr", "gehört", "Gebiet", "Gültige",
-                       "Christlich Demokratische", # CDU
-                       "Sozialdemokratische", # SPD
-                       "Alternative für Deutschland", # AfD
-                       "Freie Demokratische", # FDP
-                       "DIE LINKE", 
-                       "BÜNDNIS 90/DIE GRÜNEN",
-                       "Christlich-Soziale"))) %>%
-  # Quitamos las dos primeras filas vacías (están vacías)
-  slice(-(1:2))
-```
-
-```{r}
-# Sacamos primera fila para fijarnos en el tipo de variables
-datos_filtrados %>% slice(1)
-```
-
-Si te fijas las variables de los votos de los partidos se muestran como números pero en realidad son cadenas de texto (`<chr>` aparece en la cabecera). Para poder trabajar con ellos como números vamos a convertir toda columna a número (salvo el nombre del distrito) con `mutate_at()`, indicándole primero las columnas y luego a aplicar a todas ellas.
-
-```{r}
-datos_filtrados <- datos_filtrados %>%
-  # Todo lo que no sea el nombre del distrito lo
-  # convertimos a número
-  mutate_at(vars(!contains(c("Gebiet"))), as.numeric)
-
-  # Renombramos columnas
-  names(datos_filtrados) <- 
-    c("id", "id2", "distritos",  "validos", "CDU", "SPD", "AfD",
-      "FDP", "LINKE", "GRÜNE", "CSU")
-```
-
-Además los votos de la unión CDU/CSU los queremos agregar como un solo partido (ya que se presentan en coalición), así que calcularemos una nueva variable `CDU_CSU` como la suma de ambas, eliminaremos las columnas antiguas, y creamos una variable `OTROS`, que tendrá el número de votos válidos menos la suma de estos 6 partidos.
-
-```{r}
-# Unimos CDU + CSU y calculamos el OTROS
-datos_filtrados <- datos_filtrados %>% 
-  mutate("CDU_CSU" = datos_filtrados %>% 
-           select(c("CDU", "CSU")) %>%
-           replace(is.na(.), 0) %>%
-           rowSums) %>%
-  # Eliminamos CDU/CSU antiguas
-  select(-c("CDU", "CSU")) %>%
-  # Cambiamos orden de columna
-  relocate(CDU_CSU, .before = 5) %>%
-  # Sumamos en OTROS votos de los partidos seleccionados
-  mutate("OTROS" = rowSums(select(., -(1:4))))
-
-# Añadimos OTROS partidos
-datos_filtrados$OTROS <- datos_filtrados$validos -
-  datos_filtrados$OTROS
-```
-
-Por último vamos a filtrar filas con `filter()` eliminando filas que no tengan votos válidos (filas vacías muchas veces), las filas que no tengan identificador de distrito y las filas que tienen agregados todos los distritos del Länder (tienen `id2 = 99`). Con `mutate_all` podemos aplicar la misma función a todas las columnas: vamos a indicarle que todo valor que esté ausente (`NA`) lo reemplace por 0's.
-
-```{r}
-# Eliminamos filas vacías o agregadas
-datos_filtrados <- datos_filtrados %>%
-  filter(!is.na(id) & id2 != 99 & validos != 0)
-  
-# Guardamos en una variable nombres de partidos 
-partidos <- names(datos_filtrados)[-(1:4)]
-
-# Reemplazamos en todas las columnas ausentes (NA) por 0's
-datos_depurados <- datos_filtrados %>%
-  mutate_all(~replace(., is.na(.), 0))
-```
-
-Tenemos nuestros **datos depurados para empezar a trabajar**.
-
-```{r}
-# Mostramos 3 primeras filas y todas las columnas
-print(datos_depurados, n = 3, width = Inf)
-
-# Salvamos en un csv
-write_csv(datos_depurados, "./DATOS/EXPORTADO/datos_depurados_2021.csv")
-```
-
-```{r echo = FALSE}
+# Fechas
 fechas <- c("2021-09-26", "2017-09-24", "2013-09-22", "2009-09-27")
 
 datos_por_fecha <- list()
 for (i in 1:length(fechas)) {
   
-  # brutos
-  datos_brutos <-
-    read_delim(file = glue("./DATOS/{year(fechas[i])}.csv"),
-               delim = ";")
+  # Cargamos datos: archivo con columnas separadas por ,
+  datos_por_fecha[[fechas[i]]] <-
+    read_delim(file = glue("{url}datos_depurados_{year(fechas[i])}.csv"),
+               delim = ",")
   
-  if (year(fechas[i]) %in% c(2013, 2009)) {
-    
-    # Filtramos datos
-    datos_filtrados <- datos_brutos %>%
-      # Seleccionamos columnas
-      select(starts_with(c("Nr", "gehört", "Gebiet", "Gültige",
-                           "CDU", "SPD", "FDP", "DIE LINKE", 
-                           "GRÜNE", "CSU")))
-    datos_filtrados$AfD <- 0
-    datos_filtrados <- datos_filtrados %>%
-      relocate(AfD, .before = 7)
-    
-  } else {
-    
-    # Filtramos datos
-    datos_filtrados <- datos_brutos %>%
-      # Seleccionamos columnas
-      select(starts_with(c("Nr", "gehört", "Gebiet", "Gültige",
-                           "Christlich Demokratische",
-                           "Sozialdemokratische",
-                           "Alternative für Deutschland",
-                           "Freie Demokratische", "DIE LINKE", 
-                           "BÜNDNIS 90/DIE GRÜNEN",
-                           "Christlich-Soziale")))
-  }
-  
-  datos_filtrados <- datos_filtrados %>%
-    # Quitamos la fila primera de NA
-    slice(-(1:2)) %>%
-    # Pasamos variables de votos a números
-    mutate_at(vars(!contains(c("Gebiet"))), as.numeric)
-    
-  # nombres variables
-  names(datos_filtrados) <- 
-    c("id", "id2", "distritos",  "validos", "CDU", "SPD", "AfD",
-      "FDP", "LINKE", "GRÜNE", "CSU")
-  
-  # Unimos CDU + CSU y calculamos el OTROS
-  datos_filtrados <- datos_filtrados %>% 
-    mutate("CDU_CSU" = datos_filtrados %>% 
-             select(c("CDU", "CSU")) %>%
-             replace(is.na(.), 0) %>%
-             rowSums) %>%
-    # Eliminamos CDU/CSU antiguas
-    select(-c("CDU", "CSU")) %>%
-    # Cambiamos orden de columna
-    relocate(CDU_CSU, .before = 5) %>%
-    # Sumamos en OTROS los votos de todos esos partidos
-    mutate("OTROS" = rowSums(select(., -(1:4))))
-  
-  # Añadimos OTROS partidos
-  datos_filtrados$OTROS <- datos_filtrados$validos -
-    datos_filtrados$OTROS
-  
-  # Eliminamos filas vacías o agregadas
-  datos_filtrados <- datos_filtrados %>% filter(!is.na(id)) %>%
-    filter(id2 != 99) %>% filter(validos != 0)
-  
-  # Guardamos
-  datos_por_fecha[[as.character(fechas[i])]] <-
-    datos_filtrados
-  
-  write_csv(datos_filtrados,
-            glue("./DATOS/EXPORTADO/datos_depurados_{year(fechas[i])}.csv"))
 }
 
-# Guardamos nombres partidos 
-partidos <- names(datos_por_fecha$`2017-09-24`)[-(1:4)]
+# Fechas cargadas
+names(datos_por_fecha)
+```
 
+Los datos se nos han **guardado en una lista**, con el nombre de las fechas de las elecciones, de forma que **cada elemento de la lista es una tabla en formato `tibble`**, un formato de `{tidyverse}` que nos permite guardar datos en forma de tabla (cada columna puede ser lo que quiera), cuyo almacenamiento, manipulación y visualización es más eficiente que los clásicos `data.frame`. 
+
+Cada archivo de datos ya procesado (cada elemento de la lista, para cada una de las elecciones) tiene **299 filas y 8 columnas**:
+
+* Una **fila por cada uno de los 299 distritos electorales**.
+
+* En las **columnas tenemos distintas variables de interés**
+  - `id`: identificador único del distrito electoral.
+  - `id2`: región o Länder del distrito.
+  - `distrito`: nombre del distrito.
+  - `validos`: número de votos totales válidos en cada distrito.
+  - `CDU_CSU, SPD, AfD, FDP, LINKE, GRÜNE, OTROS`: votos válidos de cada partido en cada distrito (los votos de CDU y CSU se han agregado al presentarse en coalición).
+    
+  
+
+## Preparación de los datos
+
+Antes de calcular algunas estadísticas que nos serán útiles en la visualización, una buena práctica sería simple asegurarnos que no tenemos datos ausentes. Con `mutate_all` podemos aplicar la misma función a todas las columnas: vamos a indicarle que todo valor que esté ausente (`NA`) lo reemplace por 0's, y que lo haga para cada elemento de la lista (usamos la función `map()` del paquete `{purrr}` que aplica una misma función a cada elemento de una lista)
+
+```{r}
 # Reemplazamos NA
 datos_por_fecha <- 
   map(datos_por_fecha,
@@ -306,70 +179,40 @@ datos_por_fecha <-
           mutate_all(~replace(., is.na(.), 0)) })
 ```
 
-
-
-# CÁLCULO DE ESTADÍSTICAS
-
-blabla 
-
-```{r porc-votos}
-# Calculamos votos en % respecto a votos válidos
-datos_depurados <- datos_depurados %>%
-  # Calculamos porcentajes respecto a los votos válidos
-  mutate_at(partidos, funs("porc" = 100 * (./validos))) %>%
-  rowwise() %>% # calculamos máximos por filas
-  mutate("primero" = partidos[which.max(c_across(CDU_CSU:OTROS))],
-         "primer.partido" = max(c_across(CDU_CSU_porc:OTROS_porc)),
-         # Segundo con más votos
-         "segundo" = partidos[nth(c_across(CDU_CSU:OTROS), k = 2,
-                                  descending = TRUE,
-                                  index.return = TRUE)],
-         "segundo.partido" = nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,
-                                 descending = TRUE,
-                                 index.return = FALSE))
-
-# Imprimir 3 filas y todas las columnas
-print(datos_depurados, n = 3, width = Inf)
-``` 
-
-Podemos repetir el proceso de carga y depuración para tener los datos de las elecciones de 2021, 2017, 2013 y 2009. Dichos datos ya depurados están en [Github](https://raw.githubusercontent.com/dadosdelaplace/cartas-de-laplace/main/Carta-3-elecciones-alemania/DATOS/EXPORTADO). Vamos a cargarlos todo en una lista `datos_por_fecha`.
+Tras ello vamos a calcular el **voto de cada partido pero en porcentaje respecto a votos válidos** así como **estadísticas del primer y segundo partido más votado**: con `mutate_at()` (entorno `{tidyverse}`) le indicaremos que, de las columnas donde se almacenan los votos de los partidos, las convierta en porcentaje de votos, para después calcular (fila a fila, distrito a distrito), los dos partidos más votados, así como su % de voto. Dicho conjunto de operaciones lo realizaremos para cada elemento de la lista (cada elección), usando de nuevo la función `map()`.
 
 ```{r}
-fechas <- c("2021-09-26", "2017-09-24", "2013-09-22", "2009-09-27")
-datos_por_fecha <- list()
-
-# Recorremos las fechas y cargamos los archivos
-for (i in 1:length(fechas)) {
-  
-  elecciones <- year(fechas[i])
-  datos_por_fecha[[fechas[[i]]]] <-
-    read_delim(file = glue("{url}EXPORTADO/datos_depurados_{elecciones}.csv"),
-               delim = ",")
-  
-}
-names(datos_por_fecha)
-summary(datos_por_fecha)
+names(datos_por_fecha$`2021-09-26`)
 ```
 
 
-Para repetir el proceso de **añadir estadísticas a cada fichero** basta con aplicar la función `map()` del paquete `{purrr}`, y con argumento todo lo que hemos aplicado justo ahora para obtener el primer y segundo partido. Otra opción es repetir todo el proceso anterior con cada fichero que tengamos.
+```{r porc-votos}
+partidos <- c("CDU_CSU", "SPD", "AfD", "FDP", "LINKE", "GRÜNE", "OTROS")
 
-```{r}
+# Calculamos votos en % respecto a votos válidos
 datos_por_fecha <-
   map(datos_por_fecha,
-      function(x) { x %>% mutate_at(partidos,
-                                    funs("porc" = 100 * (./validos))) %>%
+      function(x) { x %>%
+          # Calculamos porcentajes
+          mutate_at(partidos,
+                    funs("porc" = 100 * (./validos))) %>%
+          # Le indicamos que lo siguiente lo queremos fila a fila
           rowwise() %>%
+          # Calculamos primer/segundo partido más votado y su %
           mutate("primero" =
                    partidos[which.max(c_across(CDU_CSU:OTROS))],
-                 "primer.partido" = max(c_across(CDU_CSU_porc:OTROS_porc)),
-                 "segundo" = partidos[nth(c_across(CDU_CSU:OTROS), k = 2,
-                                          descending = TRUE,
-                                          index.return = TRUE)],
+                 "primer.partido" =
+                   max(c_across(CDU_CSU_porc:OTROS_porc)),
+                 # con nth calculamos el n-ésimo máximo
+                 "segundo" =
+                   partidos[Rfast::nth(c_across(CDU_CSU:OTROS), k = 2,
+                                descending = TRUE,
+                                index.return = TRUE)],
                  
-                 "segundo.partido" = nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,
-                                         descending = TRUE,
-                                         index.return = FALSE))} )
+                 "segundo.partido" =
+                   Rfast::nth(c_across(CDU_CSU_porc:OTROS_porc), k = 2,
+                       descending = TRUE,
+                       index.return = FALSE))} )
 
 # Guardamos
 write_csv(datos_por_fecha$`2021-09-26`,
@@ -380,53 +223,1124 @@ write_csv(datos_por_fecha$`2013-09-22`,
           file = "./DATOS/EXPORTADO/datos_con_estadisticas_2013.csv")
 write_csv(datos_por_fecha$`2009-09-27`,
           file = "./DATOS/EXPORTADO/datos_con_estadisticas_2009.csv")
-```
 
-Para facilitarnos la labor en algunas gráficas vamos a calcular también una **tabla de datos agregados**, que nos dé estadísticas de cada partido para todas las elecciones (sin desagregar por distritos).
+# Imprimir 3 filas y todas las columnas
+print(datos_por_fecha$`2021-09-26`, n = 3, width = Inf)
+``` 
 
+Por último, para facilitarnos la labor en algunas gráficas vamos a calcular también una **tabla de datos agregados**, que nos dé estadísticas de cada partido para todas las elecciones (sin desagregar por distritos).
 
 ```{r}
-# Datos globales de Alemania en cada elección
-datos1 <- datos_por_fecha$`2021-09-26` %>% 
-  # Seleccionamos las variables numéricas
-  select_if(is.numeric) %>%
-  # Eliminamos primero/segundo, porcentajes y votos válidos
-  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
-  # Transponemos (pivotamos) la tabla
-  pivot_longer(everything()) %>%
-  # Tras agrupar por partidos, calculamos suma de votos
-  group_by(name) %>%
-  summarize(sum(value, na.rm = TRUE)) %>%
-  # Etiqueta de la elección
-  mutate("eleccion" = 2021)
-datos2 <- datos_por_fecha$`2017-09-24` %>% 
-  select_if(is.numeric) %>%
-  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
-  pivot_longer(everything()) %>% group_by(name) %>%
-  summarize(sum(value, na.rm = TRUE)) %>% mutate("eleccion" = 2017)
-datos3 <- datos_por_fecha$`2013-09-22` %>% 
-  select_if(is.numeric) %>%
-  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
-  pivot_longer(everything()) %>% group_by(name) %>%
-  summarize(sum(value, na.rm = TRUE)) %>% mutate("eleccion" = 2013)
-datos4 <- datos_por_fecha$`2009-09-27` %>% 
-  select_if(is.numeric) %>%
-  select(-contains(c("id", "_porc", "validos", "primer", "segundo"))) %>% 
-  pivot_longer(everything()) %>% group_by(name) %>%
-  summarize(sum(value, na.rm = TRUE)) %>% mutate("eleccion" = 2009)
+datos_global_alemania <- c()
+# Recorremos fechas
+for (i in 1:length(fechas)) {
+  
+  # Datos globales de Alemania en cada elección
+  datos <- datos_por_fecha[[i]] %>% 
+    # Seleccionamos las variables numéricas
+    select_if(is.numeric) %>%
+    # Eliminamos primero/segundo, porcentajes y votos válidos
+    select(-contains(c("id", "_porc", "validos",
+                       "primer", "segundo"))) %>% 
+    # Transponemos (pivotamos) la tabla
+    pivot_longer(everything()) %>%
+    # Tras agrupar por partidos, calculamos suma de votos
+    group_by(name) %>%
+    summarize(sum(value, na.rm = TRUE)) %>%
+    # Etiqueta de la elección
+    mutate("eleccion" = year(fechas[i]))
 
-# Globales uniendo todas las elecciones
-datos_global_alemania <- rbind(datos1, datos2, datos3, datos4)
+  # Agregamos
+  datos_global_alemania <- rbind(datos_global_alemania, datos)
+}
+
+# Ponemos nombres a las columnas
 names(datos_global_alemania) <- c("name", "value", "eleccion")
 
 # Guardamos
 write_csv(datos_global_alemania, "./DATOS/EXPORTADO/datos_global_alemania.csv")
+
+datos_global_alemania
 ```
-# VISUALIZACIÓN
 
-## Visualización de mapas
-dsada
+## Preparación de los mapas
 
-
+> Los datos relativos a la geometría de los mapas en Alemania se ha descargado de la fuente oficial <https://www.bundeswahlleiter.de/bundestagswahlen/2021/wahlkreiseinteilung/downloads.html>
 
 
+```{r echo = FALSE}
+library(knitr)
+paquetes <-
+  data.frame("paquetes" = c("{purrr}", "{sf}"),
+             "descripción" = c("Operaciones con listas", "Manipulación de datos espaciales"))
+kable(paquetes, col.names = c("paquetes", "descripción"), align = "ll",
+      caption = "Paquetes a utilizar en la preparación de mapas")
+``` 
+
+Usaremos el formato _shapefile_, un formato vectorial (multiarchivo) de almacenamiento donde se guarda la localización de los elementos geográficos y sus atributos asociados a ellos.
+
+
+```{r}
+# Manipulación de datos espaciales
+library(sf) 
+
+# Distritos electorales: cargamos el archivoshp
+mapa <- read_sf("./DATOS/shapes/Geometrie_Wahlkreise_20DBT_geo.shp")
+mapa
+```
+
+En este caso dicho archivo contiene el identificador del distrito electoral (`WKR_NR`), su nombre (`WKR_NAME`), el identificador del Länder (`LAND_NR`), su nombre (`LAND_NAME`) y la geometría (`geometry`) de los polígonos que definirán nuestras regiones. Con `st_cast` (del paquete `{sf}`) podemos extraer también las fronteras de los mismos por separado.
+                     
+```{r}
+# Extraemos de los datos las fronteras de los polígonos
+fronteras <- mapa %>% st_cast("MULTILINESTRING")
+```
+
+Lo que haremos será, para cada elemento de la lista (cada elección), **cruzar la información** del mapa que acabamos de procesar y los datos electorales que tenemos, tomando como campo de cruce (un campo que debe estar en ambos sitios) el identificar del distrito (con `by = c("WKR_NR" = "id")`).
+
+```{r}
+# Cruce de la geometría del mapa con los datos
+mapa_sf_datos <- map(datos_por_fecha, 
+                      function(x, y) { left_join(y, x, by = c("WKR_NR" = "id")) },
+                     mapa)
+```
+
+De esta manera ahora tenemos nuestros **datos de cada distrito asociados a un polígono que vamos a visualizar** (con su geometría guardada). Con dichos arcivos ya podemos crear nuestro **primer mapa para las elecciones del pasado 26 de septiembre de 2021**: simplemente necesitamos indicarle a `ggplot` cual va a ser nuestro fichero de datos base, y usar `geom_sf()` para que nos lo pinte.
+
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+      geom_sf(fill = "white", size = 0.02, color = "black")
+```
+
+De momento simplemente le hemos indicado que **nos pinte los polígonos de cada distrito con fondo blanco** (`fill = "white"`), las fronteras de color negras (`color = "black"`), y el tamaño (`size = 0.02`). Podemos configurar libremente los colores, por ejemplo pintando el fondo de azul.
+
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(fill = "blue", size = 0.02, color = "black")
+```
+
+
+
+# VISUALIZACIÓN {#dataviz}
+
+```{r echo = FALSE}
+library(knitr)
+paquetes <-
+  data.frame("paquetes" = c("{tidyverse}", "{sf}", "{showtext}",
+                            "{ggtext}", "{patchwork} y {cowplot}",
+                            "{ggbump}", "{biscale}"),
+             "descripción" = c("Manejo de datos (y ggplot2)",
+                               "Manipulación de datos espaciales",
+                               "Uso de fuentes", "Textos en html",
+                               "Componer gráficas", "bump charts",
+                               "escalas bivariantes"))
+kable(paquetes, col.names = c("paquetes", "descripción"), align = "ll",
+      caption = "Paquetes a utilizar en la visualización")
+```
+
+
+```{r}
+library(showtext) # Fuentes
+library(ggtext) # textos (y en html)
+library(patchwork) # componer gráficas
+library(cowplot)
+library(ggbump) # curvas sigmoides
+library(biscale) # escalas bivariantes
+```
+
+
+## Mapas
+
+Para visualizar datos en mapas en `R` necesitamos dos cosas:
+
+* Algún **archivo que nos aporte información sobre la geometría** del mapa (en este caso el archivo `.shp` que hemos ya procesado).
+* **Datos asocociados a cada región** del polígono.
+
+Muchas veces lo que tenemos a nuestra disposición es un contorno y una malla de puntos (con latitut y longitud). Si el objetivo es **visualizar el reparto de poder**, esta representación no tendría sentido ya que los 299 distritos electorales son uninominales (de las primeras votaciones, solo se lleva un asiento en el Bundestag el partido más votado). Sin embargo, si la idea es visualizar el reparto de voto a lo largo de todos y cada uno de los municipios, sí podría ser util una representación de todo el mallado del país.
+
+### Mapa con fronteras
+
+Como vemos a veces podemos tener problemas con el fondo y las fronteras de las regiones (que quedan muy difuminadas). Una primera solución puede ser incrementar el grosor de las fronteras (por ejemplo, `size = 1.5`)
+
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(fill = "blue", size = 1.5, color = "black")
+```
+
+Sin embargo, dicho aumento de grosor puede hacer que regiones muy pequeños acaben «ocultas» por dicho grosor. Una solución más óptima y flexible es **añadir una capa tras el relleno (por encima de él) de las fronteras de forma independiente**, con un segundo `geom_sf()` que solo nos pinte las `fronteras` que hemos extraído.
+
+
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(fill = "blue", size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25)
+```
+
+### Mapa con relleno en función de los datos
+
+Hemos visto que con 3 simples líneas `R` nos permite visualizar mapas si tenemos los archivos preparados de forma correcta. De momento le hemos indicado que el relleno sea fijo, de color azul (`fill = "blue"`), pero lo realmente útil es que el **relleno de los polígonos dependiense de alguna variable** que tengamos en nuestro archivo (recuerda que en `mapa_sf_datos` tenemos todo: la geometría del mapa pero también los datos asociados a cada distrito).
+
+Vamos a construir un **mapa cuyo color depende del Länder** al que pertenece. Una de las **principales fortalezas de `ggplot`** es que podemos construir visualizaciones _aesthetic_: hacer **corresponder propiedades estéticas o visuales (posición, color de línea, relleno, tamaños, etc) en función de los datos**. Al hacer `aes(fill = LAND_NAME)` en la orden `ggplot()` inicial le indicamos que toda función que tenga un parámetro de relleno (`fill = `) va a ser en función de la variable `LAND_NAME` (nombre de los Länder). Nosotros lo haremos en la orden concreta de `geom_sf` (por si en algún momento otro relleno lo queremos poner en función de otra variable).
+
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = LAND_NAME), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25)
+```
+
+Tres líneas y ya tenemos un **mapa de color en base a una variable**.
+
+### Mapa del % de voto de cada partido
+
+Uno de los mapas que vamos a visualizar es el **porcentaje de votos de cada partido en cada uno de los distritos electorales**, por ejemplo, el % de votos de la CDU/CSU en cada uno de los distritos.
+
+```{r}
+# 20 primeros valores de la variable de interés
+mapa_sf_datos$`2021-09-26`$CDU_CSU_porc[1:20]
+```
+
+Como ves el **% de voto es una variable continua** así que para poder representarla correctamente vamos a discretizarla: vamos a **crear intervalos de % de voto** con la orden `cut()` (0-5%, 5%-10%, 10%-15%, 15%-20%, 20%-25%, 25%-30%, 30%-35%, y más de 35% de voto)
+
+```{r}
+# Saltos de los rangos
+saltos <- c(5, 10, 15, 20, 25, 30, 35, Inf)
+
+# Creamos los rangos y los guardamos
+mapa_sf_datos$`2021-09-26`$CDU_CSU_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$CDU_CSU_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+
+# Mostramos los primeros 20
+mapa_sf_datos$`2021-09-26`$CDU_CSU_rangos[1:20]
+``` 
+
+Basta ahora con indicarle en el `aes()` que el relleno lo queremos en función de dichos rangos (`aes(fill = CDU_CSU_rangos)`).
+
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = CDU_CSU_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25)
+```
+
+### Paleta de colores
+
+De nuevo con 3 líneas tenemos un mapa de Alemania coloreado en función del % de voto que sacó la CDU/CSU en cada distrito, pero los colores son totalmente aleatorios (los que ha elegido por defecto `R`), sin ningún tipo de significado. Como vamos a querer **pintar un mapa para cada partido, vamos definir un color base para uno**: negro para la CDU/CSU, rojo para el SPD, granate para LINKE, verde para GRÜNE, amarillo para FDP, azul para AfD y morado para OTROS.
+
+Los colores seguirán dependiente de `CDU_CSU_rangos` pero le vamos a **pasar nosotros el vector de colores a elegir en función de esos rangos con `scale_fill_manual()`**, índicándole el título de la escala, los valores de colores asociados a cada rango (**construiremos una paleta de grises/negros**) y las etiquetas que queremos que figuren en cada rango (conviertiendo `saltos` a texto).
+             
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = CDU_CSU_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos de la CDU/CSU", 
+                    values = # paleta colores escala grises
+                      rev(hcl.colors(length(saltos), "Grays")),
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " ")
+                    )
+```
+
+Para **hacer lo mismo con otro partido** basta con que repitamos el proceso de crear los rangos su porcentaje de voto, y elegir la escala de colores (en este caso usaremos una escala de rojos para el SPD).
+
+```{r}
+# Saltos de los rangos
+saltos <- c(5, 10, 15, 20, 25, 30, 35, Inf)
+
+# Creamos los rangos y los guardamos
+mapa_sf_datos$`2021-09-26`$SPD_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$SPD_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = # paleta colores escala grises
+                      rev(hcl.colors(length(saltos), "Reds")),
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " ")
+                    )
+```
+
+Es importante definir bien la discretización en función de lo que queramos visualizar y la naturaleza de la variable para que la visualización puede ser interpretable (si fijamos pocos rangos, tendremos muchos territorios con el mismo color).
+
+```{r}
+# Saltos de los rangos
+saltos <- c(5, 10, 15, 20, Inf)
+
+# Creamos los rangos y los guardamos
+mapa_sf_datos$`2021-09-26`$SPD_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$SPD_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = # paleta colores escala grises
+                      rev(hcl.colors(length(saltos), "Reds")),
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " ")
+                    )
+```
+
+### Paleta de colores y estilos
+
+Por último vamos a **poner nuestro mapa algo más bonito**, aunque esto ya es cuestión de gustos. Lo primero que haremos será poner la **leyenda en horizontal**, con las **etiquetas** en medio de las barras de color y por debajo de las mismas, añadiendo a `scale_fill_manual()` el argumento `guide = guide_legend()` con los siguientes parámetros
+
+* `direction = "horizontal"`: leyenda en horizontal.
+* `keyheight = 1, keywidth = 2`: altura/anchura de las barras en la leyenda.
+* `title.position = "top"`: posición del título.
+* `title.hjust = .5, label.hjust = .5`: centramos títulos y etiquetas.
+* `nrow = 1`: leyenda de una fila.
+* `byrow = TRUE`: hacemos la leyenda continua.
+* `label.position = "bottom"`: textos debajo de las barras.
+
+
+```{r}
+# Saltos de los rangos
+saltos <- c(5, 10, 15, 20, 25, 30, 35, Inf)
+
+# Creamos los rangos y los guardamos
+mapa_sf_datos$`2021-09-26`$SPD_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$SPD_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = # paleta colores escala de rojos
+                      rev(hcl.colors(length(saltos), "Reds")),
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keyheight = 1, keywidth = 2,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom"))
+```
+
+Vamos a crear además un **tema común de estilos** para todos los mapas que hagamos, y lo primero será definir las **fuentes tipográficas** que queremos. En este caso optaremos por la fuente `Titillium Web`.
+
+```{r}
+font_add_google("Titillium Web", "titillium")
+showtext_auto() 
+```
+
+Vamos a **definir un tema desde cero** indicando con `theme_set(theme_void())` que lo queremos sin ninguna configuración previa, y le vamos a indicar después de qué **fuente, color y tamaño queremos los textos y leyendas, los márgenes y la posición** de la leyenda
+
+```{r}
+# Ajustes comunes de las gráficas
+theme_set(theme_void())
+theme_update(
+  # leyenda
+  legend.text = element_text(size = 8, color = "grey20",
+                             family = "titillium"),
+  legend.title = element_text(face = "bold", size = 10, color = "grey20",
+                              family = "titillium"),
+  legend.position = "bottom",
+  # ejes/grid
+  panel.background = element_rect(fill = "white", color = "white"),
+  # títulos/subtítulos
+  plot.title = element_text(size = 18, face = "bold", color = "black",
+                            family = "titillium", hjust = 0.5),
+  # subtítulo
+  plot.subtitle = element_text(size = 13, color = "grey20",
+                               family = "titillium", hjust = 0.5),
+  # márgenes
+  plot.margin = margin(t = 0.2, b = 0.2, r = 0.1, l = 0.1, "cm"))
+
+```
+
+Tras dichos ajustes volvemos a **visualizar el mapa añadiendo título y subítulo, así como el color de la leyenda** (en función del color de base de la paleta)
+
+```{r}
+# paleta colores escala de rojos
+paleta <- rev(hcl.colors(length(saltos), "Reds"))
+
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keyheight = 1, keywidth = 2,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # título/subtítulo
+  labs(title = paste0("ELECCIONES FEDERALES DE ALEMANIA"),
+       subtitle =
+         paste0("Metodología: datos de primeras votaciones desagregados en 299\n",
+                "distritos electorales (Wahlkreise).\n",
+                "% de voto con ESCALA RELATIVA en colores.")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+```
+
+
+Por último vamos a darle un **toque diferente al título haciendo que tenga los colores la bandera Alemania**, indicándole que el título será en `markdown` (para poder introducir colores en html).
+
+```{r}
+ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keyheight = 1, keywidth = 2,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # título/subtítulo
+  labs(title =
+         paste0("<span style = 'color:#000000'>ELECCIONES</span> ",
+                "<span style = 'color:#dd1f00'>FEDERALES</span> ",
+                "<span style = 'color:#ffce01'>DE ALEMANIA</span>"),
+       subtitle =
+         paste0("Metodología: datos de primeras votaciones desagregados en 299\n",
+                "distritos electorales (Wahlkreise).\n",
+                "% de voto con ESCALA RELATIVA en colores.")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(
+    # título con element_markdown para el html con colores
+    plot.title = element_markdown(size = 18, face = "bold", color = "black",
+                                  family = "titillium", hjust = 0.5),
+    legend.title = element_text(color = rev(paleta)[1]))
+```
+
+## Componer gráficas
+
+
+A veces nos interesa **unir varias gráficas** en una misma imagen, por ejemplo, el % de voto de un partido en las 3 últimas elecciones para ver su evolución. Para ello vamos a usar el paquete `{patchwork}` que nos permite sumar gráficas de forma sencilla. Además con `plot_layout(nrow = 1, guides = "collect")` le indicaremos que las queremos en una fila y con una única leyenda común.
+
+```{r}
+mapa_2021 <- 
+  ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keyheight = 1, keywidth = 2,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# Creamos los rangos y los guardamos
+mapa_sf_datos$`2017-09-24`$SPD_rangos <-
+  cut(mapa_sf_datos$`2017-09-24`$SPD_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+mapa_2017 <- 
+  ggplot(mapa_sf_datos$`2017-09-24`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keyheight = 1, keywidth = 2,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# Creamos los rangos y los guardamos
+mapa_sf_datos$`2013-09-22`$SPD_rangos <-
+  cut(mapa_sf_datos$`2013-09-22`$SPD_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+mapa_2013 <- 
+  ggplot(mapa_sf_datos$`2013-09-22`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keyheight = 1, keywidth = 2,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# Componemos añadiendo un título a cada una individual
+((mapa_2013 + labs(title = "22/09/2013")) +
+  (mapa_2017 + labs(title = "24/09/2017")) +
+  (mapa_2021 + labs(title = "26/09/2021"))) +
+    plot_layout(nrow = 1, guides = "collect") 
+```
+
+También puede ser interesante **visualizar los resultados de los 6 principales partidos en una sola gráfica**. Para que la comparación tenga sentido, lo haremos en base a una **escala de rangos común** para todos: es interesante adaptarla si queremos comparar el partido consigo mismo en otro momento temporal, pero si comparamos con otros partidos debemos unificarla para poder calibrar el poder de cada uno. Esta vez además añadiremos un pie de figura con `caption`
+
+> Tienes en <https://github.com/dadosdelaplace/cartas-de-laplace/blob/main/Carta-3-elecciones-alemania/codigo_bruto.R> el código utilizado donde se han programado una serie de funciones para poder automatizar dicho visualizado para cada partido y elección.
+
+
+```{r}
+# Saltos/rangos comunes
+saltos <- c(0, 5, 10, 15, 20, 25, 30, 35, Inf)
+
+# CDU/CSU
+mapa_sf_datos$`2021-09-26`$CDU_CSU_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$CDU_CSU_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+paleta <- rev(hcl.colors(length(saltos), "Grays"))
+mapa_CDU_CSU <- 
+  ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = CDU_CSU_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos de la CDU/CSU", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keywidth = 0.8, keyheight = 0.4,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# SPD
+mapa_sf_datos$`2021-09-26`$SPD_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$SPD_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+paleta <- rev(hcl.colors(length(saltos), "Reds"))
+mapa_SPD <- 
+  ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = SPD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos del SPD", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keywidth = 0.8, keyheight = 0.4,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# AfD
+mapa_sf_datos$`2021-09-26`$AfD_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$AfD_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+paleta <- rev(hcl.colors(length(saltos), "Blues"))
+mapa_AfD <- 
+  ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = AfD_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos de AfD", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keywidth = 0.8, keyheight = 0.4,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# GRUNE
+mapa_sf_datos$`2021-09-26`$GRÜNE_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$GRÜNE_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+paleta <- rev(hcl.colors(length(saltos), "Greens3"))
+mapa_GRUNE <- 
+  ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = GRÜNE_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos de GRÜNE", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keywidth = 0.8, keyheight = 0.4,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# DIE LINKE
+mapa_sf_datos$`2021-09-26`$LINKE_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$LINKE_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+paleta <- rev(hcl.colors(length(saltos), "Burg"))
+mapa_LINKE <- 
+  ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = LINKE_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos de DIE LINKE", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keywidth = 0.8, keyheight = 0.4,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# FDP (construimos una escala distinta para amarillos)
+mapa_sf_datos$`2021-09-26`$FDP_rangos <-
+  cut(mapa_sf_datos$`2021-09-26`$FDP_porc, saltos,
+      include.lowest = TRUE, dig.lab = 3)
+paleta <- colorRampPalette(c("#FDFDF8", "#E5B125"))(length(saltos))
+mapa_FDP <- 
+  ggplot(mapa_sf_datos$`2021-09-26`) +
+  geom_sf(aes(fill = FDP_rangos), size = 0.02, color = "black") +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_fill_manual(name = # título
+                      "% de votos de OTROS", 
+                    values = paleta,
+                    labels = # etiquetas (convertidos a texto)
+                      prettyNum(saltos, big.mark = " "),
+                    drop = FALSE, # mantener todos los niveles
+                    guide =
+                      guide_legend(direction = "horizontal",
+                                   keywidth = 0.8, keyheight = 0.4,
+                                   title.position = "top",
+                                   title.hjust = .5, label.hjust = .5,
+                                   nrow = 1, byrow = TRUE,
+                                   label.position = "bottom")) +
+  # Color título leyenda: color más oscuro de la paleta
+  theme(legend.title = element_text(color = rev(paleta)[1]))
+
+# Componemos con cowplot::plot_grid
+plot_grid(mapa_CDU_CSU, mapa_SPD, mapa_AfD, mapa_LINKE,
+          mapa_FDP, mapa_GRUNE, nrow = 2) +
+  # Añadimos caption
+  plot_annotation(
+    title = 
+      paste0("<span style = 'color:#000000'>ELECCIONES</span> ",
+             "<span style = 'color:#dd1f00'>FEDERALES</span> ",
+             "<span style = 'color:#ffce01'>DE ALEMANIA</span>"),
+    subtitle =
+      paste0("Metodología: datos de primeras votaciones visualizados en base a ",
+             "desagregación territorial en 299 distritos (Wahlkreise)\n",
+             "(se omiten datos de segundas votaciones). ",
+             "% de voto con ESCALA FIJA en colores."),
+    caption =
+      paste0("cartasdelaplace.substack.com • Javier Álvarez Liébana (@dadosdelaplace)\n",
+             "Datos electorales y shapes: The Federal Returning Officer ",
+             "(https://www.bundeswahlleiter.de)"),
+    theme =
+      theme(plot.caption =
+              element_text(size = 11, color = "grey60",
+                           family = "titillium", hjust = 0.5),
+            # título con element_markdown para el html con colores
+            plot.title =
+              element_markdown(size = 21, face = "bold", color = "black",
+                               family = "titillium", hjust = 0.5),
+            # subtítulo
+            plot.subtitle = element_text(size = 11, color = "grey20",
+                                         family = "titillium", hjust = 0.5)))
+```
+
+### Mapa bivariante de cloropletas: primero vs segundo
+
+La visualización en mapas no solo la podemos con variables cuantitativas sino **también con variables cualitativas**, como por ejemplo, **visualizar el partido que ha quedado primero en cada distrito electoral**, lo que nos permitirá visualizar el verdadero reparto de poder entre los partidos (al ser distritos uninominales). Basta que repitamos las tres líneas que hemos usado para dibujar nuestro mapa anterior pero **indicándole en `aes(fill = primero)` que la variable que decide el color del relleno** es la variable donde tenemos guardado el **nombre del partido con mayor % de votos**.
+
+```{r}
+datos <- mapa_sf_datos$`2021-09-26`
+mapa_ganadores_2021 <-
+  ggplot(datos) +
+  geom_sf(aes(fill = primero), size = 0.02, color = "black", alpha = 1) +
+  geom_sf(data = fronteras, col = "black", size = 0.25)
+mapa_ganadores_2021
+```
+
+Al igual que sucedía antes, si no indicamos nada la elección de colores la hace `R`, así que con `scale_colour_manual()` vamos a **decirle explícitamente el color asociado a cada partido**, dándole además los estilos que hemos incorporado ya antes.
+
+```{r}
+mapa_ganadores_2021 <-
+  mapa_ganadores_2021 +
+  scale_colour_manual(name = "Primer partido en votos",
+                      aesthetics = c("colour", "fill"),
+                      values = c("AfD" = "#7e9fce", "CDU_CSU" = "#494949",
+                                 "LINKE" = "#b8637a", "FDP" = "#f0c553",
+                                 "GRÜNE" = "#5ba06a", "OTROS" = "#877ab5",
+                                 "SPD" = "#e35565"),
+                      labels = c("AfD", "CDU/CSU", "LINKE", "FDP",
+                                 "DIE LINKE", "OTROS", "SPD"),
+                      drop = FALSE,
+                      guide =
+                        guide_legend(direction = "horizontal",
+                                     keywidth = 2, keyheight = 0.8,
+                                     title.position = "top",
+                                     title.hjust = 0.5, label.hjust = .5,
+                                     nrow = 1, byrow = TRUE, reverse = FALSE,
+                                     label.position = "bottom")) +
+      labs(title = "1º partido (2021)") +
+      theme(
+        # título
+        plot.title = element_text(size = 13, face = "bold", color = "black",
+                                  family = "titillium", hjust = 0.5),
+        # subtítulo
+        plot.subtitle = element_text(size = 5, color = "grey20",
+                                     family = "titillium", hjust = 0.5),
+        legend.title = element_text(color = "grey20", face = "bold"))
+mapa_ganadores_2021
+```
+
+En unas elecciones de este tipo, donde los distritos son uninominales, **visualizar solo el partido ganador puede hacernos perder información** ya que quizás el segundo haya quedado muy cerca (o no). Por eso es interesante visualizar no solo el que gana sino qué **partidos han quedado segundo en cada distrito**. Como también tenemos guardado dicho partido en los datos procesados (tienes en Github el código para replicarlo) basta con hacer `aes(fill = segundo)`.
+
+```{r}
+mapa_segundos_2021 <-
+  ggplot(datos) +
+  geom_sf(aes(fill = segundo), size = 0.02, color = "black", alpha = 1) +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_colour_manual(name = "Segundo partido en votos",
+                      aesthetics = c("colour", "fill"),
+                      values = c("AfD" = "#7e9fce", "CDU_CSU" = "#494949",
+                                 "LINKE" = "#b8637a", "FDP" = "#f0c553",
+                                 "GRÜNE" = "#5ba06a", "OTROS" = "#877ab5",
+                                 "SPD" = "#e35565"),
+                      labels = c("AfD", "CDU/CSU", "LINKE", "FDP",
+                                 "DIE LINKE", "OTROS", "SPD"),
+                      drop = FALSE,
+                      guide =
+                        guide_legend(direction = "horizontal",
+                                     keywidth = 2, keyheight = 0.8,
+                                     title.position = "top",
+                                     title.hjust = 0.5, label.hjust = .5,
+                                     nrow = 1, byrow = TRUE, reverse = FALSE,
+                                     label.position = "bottom")) +
+      labs(title = "2º partido (2021)") +
+      theme(
+        # título
+        plot.title = element_text(size = 13, face = "bold", color = "black",
+                                  family = "titillium", hjust = 0.5),
+        # subtítulo
+        plot.subtitle = element_text(size = 5, color = "grey20",
+                                     family = "titillium", hjust = 0.5),
+        legend.title = element_text(color = "grey20", face = "bold"))
+mapa_segundos_2021
+```
+
+Vamos a hacer lo mismo con las elecciones en 2017 y juntarlos, para **ver los cambios en el reparto de poder, no solo del ganador sino del partido que queda segundo**, componiendo luego las gráficas.
+
+```{r}
+datos <- mapa_sf_datos$`2017-09-24`
+mapa_ganadores_2017 <-
+  ggplot(datos) +
+  geom_sf(aes(fill = primero), size = 0.02, color = "black", alpha = 1) +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_colour_manual(name = "Segundo partido en votos",
+                      aesthetics = c("colour", "fill"),
+                      values = c("AfD" = "#7e9fce", "CDU_CSU" = "#494949",
+                                 "LINKE" = "#b8637a", "FDP" = "#f0c553",
+                                 "GRÜNE" = "#5ba06a", "OTROS" = "#877ab5",
+                                 "SPD" = "#e35565"),
+                      labels = c("AfD", "CDU/CSU", "LINKE", "FDP",
+                                 "DIE LINKE", "OTROS", "SPD"),
+                      drop = FALSE,
+                      guide =
+                        guide_legend(direction = "horizontal",
+                                     keywidth = 2, keyheight = 0.8,
+                                     title.position = "top",
+                                     title.hjust = 0.5, label.hjust = .5,
+                                     nrow = 1, byrow = TRUE, reverse = FALSE,
+                                     label.position = "bottom")) +
+      labs(title = "1º partido (2017)") +
+      theme(
+        # título
+        plot.title = element_text(size = 13, face = "bold", color = "black",
+                                  family = "titillium", hjust = 0.5),
+        # subtítulo
+        plot.subtitle = element_text(size = 5, color = "grey20",
+                                     family = "titillium", hjust = 0.5),
+        legend.title = element_text(color = "grey20", face = "bold"))
+
+mapa_segundos_2017 <-
+  ggplot(datos) +
+  geom_sf(aes(fill = segundo), size = 0.02, color = "black", alpha = 1) +
+  geom_sf(data = fronteras, col = "black", size = 0.25) +
+  scale_colour_manual(name = "Segundo partido en votos",
+                      aesthetics = c("colour", "fill"),
+                      values = c("AfD" = "#7e9fce", "CDU_CSU" = "#494949",
+                                 "LINKE" = "#b8637a", "FDP" = "#f0c553",
+                                 "GRÜNE" = "#5ba06a", "OTROS" = "#877ab5",
+                                 "SPD" = "#e35565"),
+                      labels = c("AfD", "CDU/CSU", "LINKE", "FDP",
+                                 "DIE LINKE", "OTROS", "SPD"),
+                      drop = FALSE,
+                      guide =
+                        guide_legend(direction = "horizontal",
+                                     keywidth = 2, keyheight = 0.8,
+                                     title.position = "top",
+                                     title.hjust = 0.5, label.hjust = .5,
+                                     nrow = 1, byrow = TRUE, reverse = FALSE,
+                                     label.position = "bottom")) +
+      labs(title = "2º partido (2017)") +
+      theme(
+        # título
+        plot.title = element_text(size = 13, face = "bold", color = "black",
+                                  family = "titillium", hjust = 0.5),
+        # subtítulo
+        plot.subtitle = element_text(size = 5, color = "grey20",
+                                     family = "titillium", hjust = 0.5),
+        legend.title = element_text(color = "grey20", face = "bold"))
+
+# Componemos gráficas
+mapa_primero_segundo <-
+  (mapa_ganadores_2021 + mapa_segundos_2021 +
+     mapa_ganadores_2017 + mapa_segundos_2017) +
+  plot_layout(nrow = 1, guides = "collect")  +
+  # Añadimos caption
+  plot_annotation(title = paste0("<span style = 'color:#000000'>ELECCIONES</span> ",
+                                 "<span style = 'color:#dd1f00'>FEDERALES</span> ",
+                                 "<span style = 'color:#ffce01'>DE ALEMANIA</span>"),
+                  subtitle =
+                    paste0("Metodología: desagregación territorial basada en los 299 distritos electorales.\n",
+                           "Se muestran los dos partidos con mayor % de votos"),
+                  theme =
+                    theme(plot.caption =
+                            element_text(size = 9, color = "grey60",
+                                         family = "titillium", hjust = 0.5),
+                          # título con element_markdown para el html con colores
+                          plot.title =
+                            element_markdown(size = 21, face = "bold", color = "black",
+                                             family = "titillium", hjust = 0.5),
+                          # subtítulo
+                          plot.subtitle = element_text(size = 9, color = "grey20",
+                                                       family = "titillium", hjust = 0.5)))
+mapa_primero_segundo
+```
+
+Dicha información se puede combinar en un solo **mapa con escala bivariante**: una escala bidimensional que tomará una **paleta de colores para una variable** (% de voto del primero), otra **paleta para otra variable** (% de voto del segundo), y combinarlas en una malla para **visualizar a la vez dos variables**.
+
+Para ello vamos a usar la función `bi_class()` del paquete `{biscale}`, que nos **creará una escala de tres tramos en cada una de las dos variables** (solo permite dimensión tres como máximo en cada eje.)
+
+```{r}
+datos <- mapa_sf_datos$`2021-09-26`
+    
+# Creamos clases bivariantes en función de cuantiles
+datos_bivar <-
+  bi_class(datos, x = .data[["primer.partido"]], y = .data[["segundo.partido"]],
+           style = "quantile", dim = 3)
+datos_bivar$bi_class # clase bivariante
+```
+
+Tras crear las clases, vamos a **crear paletas de colores bidimensionales para asociarlas a cada par de coordenadas de las clases bidimensionales creadas**, con la función `bi_legend()` del paquete `{biscale}` (permite cuatro paletas bidimensionales).
+
+```{r} 
+# Leyendas bivariantes
+paleta <- "Brown"
+leyenda_bivar <- bi_legend(pal = paleta, dim = 3, xlab = "primer.partido",
+                           ylab = "segundo.partido", size = 9)
+leyenda_bivar
+```
+
+```{r} 
+# Leyendas bivariantes
+paleta <- "DkBlue"
+leyenda_bivar <-  bi_legend(pal = paleta, dim = 3, xlab = "primer.partido",
+                           ylab = "segundo.partido", size = 9)
+leyenda_bivar
+```
+
+```{r} 
+# Leyendas bivariantes
+paleta <- "DkCyan"
+leyenda_bivar <-  bi_legend(pal = paleta, dim = 3, xlab = "primer.partido",
+                           ylab = "segundo.partido", size = 9)
+leyenda_bivar
+```
+
+```{r} 
+# Leyendas bivariantes
+paleta <- "GrPink"
+leyenda_bivar <- bi_legend(pal = paleta, dim = 3, xlab = "primer.partido",
+                           ylab = "segundo.partido", size = 9)
+leyenda_bivar
+```
+    
+Lo que nos ha cambiado es **la forma de rellenar los polígonos** pero las tres órdenes para tener un mapa coloreado no cambian, más allá de **pasarle como variable para usar en el colorea la variable de clase creada (`aes(fill = bi_class)`)**.
+    
+```{r} 
+mapa_bivariante <-
+  ggplot(datos_bivar) +
+  # Ahora el relleno depende de esa clase bivariante
+  geom_sf(aes(fill = bi_class), size = 0.02,
+              color = "black", alpha = 1, show.legend = FALSE) +
+  geom_sf(data = fronteras, col = "black", size = 0.25)
+mapa_bivariante
+```
+
+De nuevo no queremos unos colores cualquiera así que **uasaremos la paleta bidimensional que hayamos elegido**.
+
+```{r}
+paleta <- "Brown"
+mapa_bivariante <- 
+  mapa_bivariante +
+  # Añadimos la paleta correcta bidimensional
+  bi_scale_fill(pal = paleta, dim = 3, na.value = "grey90")
+mapa_bivariante
+```
+
+Finalmente con **`ggplotGrob()`** generamos un objeto para ggplot con la malla de la leyenda bidimensional y con **`annotation_custom()`** para **incluir la imagen de la leyenda en el gráfica**.
+
+```{r}
+leyenda_bivar <- bi_legend(pal = paleta, dim = 3, xlab = "primer.partido",
+                           ylab = "segundo.partido", size = 9)
+mapa_bivariante <- 
+  mapa_bivariante +
+  # Hacemos imagen la malla de la leyenda y lo añadimos a la gráfica
+  annotation_custom(ggplotGrob(leyenda_bivar), 
+                    xmin = 2, xmax = 6.5,
+                    ymin = 52.8, ymax = 57.3) +
+  labs(title = "Mapa choropleth bivariante") +
+  theme(
+    # título
+    plot.title = element_text(size = 13, face = "bold", color = "black",
+                              family = "titillium", hjust = 0.5),
+    # subtítulo
+    plot.subtitle = element_text(size = 5, color = "grey20",
+                                 family = "titillium", hjust = 0.5),
+    legend.title = element_text(color = "grey20", face = "bold"))  +
+  # Añadimos subtítulo
+  labs(subtitle =
+         paste0("Más <b><span style='color::#64acbe'>AZUL</span></b> ",
+                "mayor voto del <b><span style='color:#64acbe'>partido ganador,</span></b><br>",
+                "más <b><span style='color:#c85a5a'>ROJO</span></b> ",
+                "mayor voto del <b><span style='color:#c85a5a'>segundo partido,</span></b><br>",
+                "en <b><span style='color:#574249'>MARRÓN</span></b> ",
+                "mayor dominio de <b><span style='color:#574249'>bipartidismo</span></b>.")) +
+  theme(plot.subtitle =
+          element_markdown(size = 7, hjust = 0.5))
+```
+
+
+## Diagramas de barras
+
+Otro tipo de **gráfico útil puede ser un gráfico de barras cuya superficie de cada barra asociada a cada partido esté en proporción de los votos obtenidos**. Para ello usaremos el conjunto de datos que hemos agregado en `datos_global_alemania`, con los datos de todo el país agregado por partido y elección.
+
+```{r}
+datos_global_alemania
+```
+
+Visualizaremos **barras apilada**s, y para ello le indicaremos primero los parámetros del `aes()`, de forma que la coordenada `y` será el % de voto obtenido de cada partido (`value`), la coordenada `x` será cada una de las elecciones (`eleccion` convertido a texto) y el **relleno (`fill`) dependerá del nombre del partido**. 
+
+
+* `geom_bar(position = "fill", width = 0.5)`: le indicamos que el gráfico será de tipo barra, de anchura 0.8 cada una y con `position = "fill"` tendremos **barras de igual de longitud**, de forma que su área entre elección y elección pueda ser comparada.
+
+
+```{r}
+distrib_barras <-
+  ggplot(datos_global_alemania,
+         # Le 
+         aes(y = value, x = prettyNum(eleccion), fill = name)) +
+  # position = "fill" para que sean de igual tamaño las barras
+  geom_bar(position = "fill", stat = "identity", width = 0.5)
+```
+
+Tras ello
+
+* `coord_flip()`: invertimos las coordenadas, haciendo que el gráfico sea de **barras pero horizontales**.
+
+* `scale_fill_manual()`: le indicamos manualmente los **colores** (`values`) de cada partido y la **etiqueta** (`labels`) que queremos que aparezca. 
+ 
+Y por último añadimos algunas **opciones de estilos** que ya hemos visto.
+
+```{r}
+distrib_barras <- distrib_barras +
+  # Barras horizontales
+  coord_flip() +
+  # Escala de colores (orden alfabético de los partidos)
+  scale_fill_manual(values = c("#7e9fce", "#494949", "#f0c553",
+                               "#5ba06a", "#b8637a", "#877ab5",
+                               "#e35565"),
+                    labels = c("AfD", "CDU/CSU", "FDP", "GRÜNE", 
+                               "LINKE", "OTROS", "SPD")) +
+  # Eje y con el año de la elección
+  theme(axis.text.y = element_text(size = 11)) +
+  # Leyenda, título (colores bandera alemania) y subtítulo
+  labs(fill = "Partidos", # nombre de la leyenda
+       title =
+         paste0("<span style = 'color:#000000'>ELECCIONES</span> ",
+                "<span style = 'color:#dd1f00'>FEDERALES</span> ",
+                "<span style = 'color:#ffce01'>DE ALEMANIA</span>"),
+       subtitle =
+         paste0("Metodología: datos de primeras votaciones desagregados en 299\n",
+                "distritos electorales (Wahlkreise) (se omiten segundas votaciones).\n",
+                "% de voto con ESCALA RELATIVA en colores.")) +
+  theme(
+    # título con element_markdown para el html con colores
+    plot.title = element_markdown(size = 21, face = "bold", color = "black",
+                                  family = "titillium", hjust = 0.5),
+    # subtítulo
+    plot.subtitle = element_text(size = 13, color = "grey20",
+                                 family = "titillium", hjust = 0.5))
+distrib_barras
+```
+
+## Gráficas Bump
+
+Otro de los gráficos más útiles para visualizar datos electorales los **_bump charts_**, una especie de **gráficos de líneas** pero con las transiciones entre estado y estado **suavizadas (en este caso con curvas sigmoides)**.
+
+Para ello le indicaremos
+
+* `aes(x = eleccion, y = value, color = name)`: la coordenada `x` será la variable temporal (cada elección), la coordenada `y` irá asociado al % de voto (`value`) y el color al nombre del partido (`name`).
+
+* `geom_bump(smooth = 8, size = 2)`: _bump chart_ de tamaño 2 (el valor de `smooth` indica como de suavizadas queremos las curvas).
+
+* `scale_color_manual()`: de nuevo lo usaremos para ajustar los colores manualmente
+
+
+
+```{r}
+evol_voto <-
+  ggplot(datos_global_alemania,
+         aes(x = eleccion, y = value, color = name)) +
+  # Curvas sigmoides
+  geom_bump(smooth = 8, size = 2) +
+  # Escala de colores (orden alfabético de los partidos)
+  scale_color_manual(values = c("#7e9fce", "#494949", "#f0c553",
+                                "#5ba06a", "#b8637a", "#877ab5",
+                                "#e35565"))
+evol_voto
+```
+
+Además con `geom_segment()` añadiremos segmentos verticales indícandole los puntos de inicio y final en ambas coordenadas, para marcar los cambio de estado temporales.
+
+```{r}
+evol_voto <- evol_voto +
+  geom_segment(aes(x = 2009, xend = 2009,
+                   y = min(value), yend = max(value)),
+               color = "grey20", size = 0.8) +
+  geom_segment(aes(x = 2013, xend = 2013,
+                   y = min(value), yend = max(value)),
+               color = "grey20", size = 0.2) +
+  geom_segment(aes(x = 2017, xend = 2017,
+                   y = min(value), yend = max(value)),
+               color = "grey20", size = 0.2) +
+  geom_segment(aes(x = 2021, xend = 2021,
+                   y = min(value), yend = max(value)),
+               color = "grey20", size = 0.8)
+evol_voto
+```
+
+También añadiremos puntos en esos cambios de estado con `geom_point()`, filtrando año a año, e indicándole el tamaño del punto y el relleno manualmente con `scale_fill_manual()`
+
+```{r}
+evol_voto <- evol_voto +
+  # Puntos/nodos por elección
+  geom_point(data = datos_global_alemania %>%
+               filter(eleccion == 2009), 
+             aes(fill = name), size = 2.5, shape = 21,
+             color = "grey20", stroke = 1) +
+  geom_point(data = datos_global_alemania %>%
+               filter(eleccion == 2013), 
+             aes(fill = name), size = 2.5, shape = 21,
+             color = "grey20", stroke = 1) +
+  geom_point(data = datos_global_alemania %>%
+               filter(eleccion == 2017), 
+             aes(fill = name), size = 2.5, shape = 21,
+             color = "grey20", stroke = 1) +
+  geom_point(data = datos_global_alemania %>%
+               filter(eleccion == 2021), 
+             aes(fill = name), size = 4.5, shape = 21,
+             color = "grey20", stroke = 1) +
+  # Escala de colores del relleno (orden alfabético de los partidos)
+  scale_fill_manual(values = c("#7e9fce", "#494949", "#f0c553",
+                               "#5ba06a", "#b8637a", "#877ab5",
+                               "#e35565")) 
+evol_voto
+```
+
+Por último añadiremos algunos ajustes estéticos y con `geom_text()` haremos que se visualice el % de voto de las últimas elecciones (con `sec.axis = dup_axis()` creamos un segundo eje x, el superior, que será el que etiquetemos).
+
+```{r}
+evol_voto <- evol_voto +
+  # Para que no se limite a los límites de la gráfica
+  coord_cartesian(clip = "off") +
+  # Eje x con etiquetas
+  scale_x_continuous(expand = c(0.01, 0.01),
+                     limits = c(2008, 2022),
+                     breaks = c(2009, 2013, 2017, 2021),
+                     labels = as.character(format(rev(as.Date(fechas)),
+                                                  "%d-%m-%Y")),
+                     # Duplicamos eje para usar solo el de arriba
+                     sec.axis = dup_axis()) +
+  # Texto al final (como en una columna extra vertical) 
+  # con el % de voto
+  geom_text(data = datos_global_alemania %>% filter(eleccion == 2021) %>%
+              mutate("porc" = 100 * value / sum(value)),
+            aes(x = 2021.2, label = glue("{round(porc, 2)}%"),
+                color = name),
+            family = "titillium",
+            size = 5, hjust = 0) +
+  labs(fill = "partidos") +
+  # Eliminamos leyendas de las líneas, dejamos la de los puntos (fill)
+  guides(color = FALSE) +
+  # Tema: eje x en la parte superior
+  theme(axis.text.x.top = element_text(size = 13, color = "grey20"),
+        axis.title.x.top = element_text(color = "black", size = 1))
+evol_voto
+```
+
+# Datos de encuestas
+
+
+> Tienes en <https://github.com/dadosdelaplace/cartas-de-laplace/blob/main/Carta-3-elecciones-alemania/codigo_bruto.R> el código utilizado donde se han programado una serie de funciones para poder automatizar el procesamiento y visualizado de encuestas .

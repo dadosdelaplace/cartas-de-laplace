@@ -413,7 +413,7 @@ mapas_bivariantes <-
   function(nuts, datos, fecha = "2017-09-24",
            titulo = "Segundo partido en votos",
            partido_1 = "primer.partido", partido_2 =  "segundo.partido",
-           paleta = "DkCyan", xmin = 2, xmax = 6.5,
+           paleta = "Brown", xmin = 2, xmax = 6.5,
            ymin = 52.8, ymax = 57.3) {
     
     # Rangos
@@ -423,9 +423,12 @@ mapas_bivariantes <-
     fronteras <- datos %>% sf::st_cast("MULTILINESTRING")
     
     # Creamos clase bivariante
+    maximo_1 <- max(datos[[partido_1]])
+    maximo_2 <- max(datos[[partido_2]])
     datos_bivar <-
-      bi_class(datos, x = .data[[partido_2]],
-               y = .data[[partido_1]], style = "quantile", dim = 3)
+      bi_class(datos, x = .data[[partido_1]],
+               y = .data[[partido_2]],
+               style = "quantile", dim = 3)
     
     # Leyenda bivariante
     leyenda_bivar <- bi_legend(pal = paleta, dim = 3, xlab = partido_1,
@@ -600,16 +603,18 @@ evol_voto <-
                color = "grey20", size = 0.2) +
   # Puntos/nodos por elección
   geom_point(data = datos_global_alemania %>%
-               filter(eleccion == 2009), size = 3.5) +
+               filter(eleccion == 2009), size = 4) +
   geom_point(data = datos_global_alemania %>%
-               filter(eleccion == 2013), size = 2) +
+               filter(eleccion == 2013), size = 2.5) +
   geom_point(data = datos_global_alemania %>%
-               filter(eleccion == 2017), 
-             aes(fill = name), size = 3.5, shape = 21,
+              filter(eleccion == 2017), size = 2.5) +
+  geom_point(data = datos_global_alemania %>%
+               filter(eleccion == 2021), 
+             aes(fill = name), size = 4, shape = 21,
              color = "grey20", stroke = 1) + 
   # Escala de colores del relleno (orden alfabético de los partidos)
-  scale_fill_manual(values = c("#7e9fce", "#494949", "#b8637a",
-                               "#f0c553", "#5ba06a", "#877ab5",
+  scale_fill_manual(values = c("#7e9fce", "#494949", "#f0c553",
+                               "#5ba06a", "#b8637a", "#877ab5",
                                "#e35565")) +
   # Para que no se limite a los límites de la gráfica
   coord_cartesian(clip = "off") +
@@ -630,6 +635,7 @@ evol_voto <-
             family = "titillium",
             size = 3, hjust = 0) +
   labs(fill = "partidos") +
+  guides(color = FALSE) +
   # Tema: eje x en la parte superior
   theme(axis.text.x.top = element_text(size = 9, color = "grey20"),
         axis.title.x.top = element_text(color = "black", size = 1))
@@ -750,8 +756,8 @@ mapa_primero_segundo <-
                                  "<span style = 'color:#dd1f00'>FEDERALES</span> ",
                                  "<span style = 'color:#ffce01'>DE ALEMANIA</span>"),
                   subtitle =
-                    paste0("Metodología: desagregación territorial basada en NUTS (Eurostat, paquete {giscoR}) con nivel 3 de ",
-                           "profundidad\n(se omiten subdivisiones de distritos como Berlín). Se muestra el partido con mayor % votos"),
+                    paste0("Metodología: desagregación territorial basada en los 299 distritos electorales.\n",
+                           "Se muestran los dos partidos con mayor % de votos"),
                   theme =
                     theme(plot.caption =
                             element_text(size = 9, color = "grey60",
@@ -770,7 +776,7 @@ mapa_primero_segundo <-
 # ##################################
 mapa_bivariante <- 
   mapas_bivariantes(mapa_sf_datos, datos_por_fecha, fecha = fechas[1],
-                    paleta = "GrPink") +
+                    paleta = "Brown") +
   # Añadimos subtítulo
   labs(subtitle = paste0("Más <b><span style='color::#64acbe'>AZUL</span></b> ",
                          "mayor voto del <b><span style='color:#64acbe'>partido ganador,</span></b><br>",
